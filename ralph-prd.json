@@ -1,0 +1,164 @@
+{
+  "project": "agile-football-game",
+  "phase": "Phase 4 - Engine Integration",
+  "version": "1.1.0",
+  "context": {
+    "description": "Engine-Funktionen (Formation Bonus, Weather Modifiers) in UI integriert",
+    "repository": "C:/Users/flori/github/agile-football-game",
+    "engine_location": "src/engine/",
+    "ui_component": "src/components/FootballGameSimulator.tsx"
+  },
+  "features": [
+    {
+      "id": "F001",
+      "title": "Coin Toss Dropdown in Maske 1",
+      "description": "Der analoge Coin Toss wird physisch durchgeführt, das Ergebnis wird per Dropdown eingegeben. Dropdown soll in der Setup-Phase (gamePhase='setup') erscheinen statt als separate coinToss-Phase mit Buttons.",
+      "acceptance_criteria": [
+        "Dropdown 'Wer hat den Coin Toss gewonnen?' in Maske 1 (Setup)",
+        "Optionen: Team 1 Name / Team 2 Name (dynamisch)",
+        "Auswahl bestimmt Starting Possession",
+        "Hinweistext: 'Muenzwurf physisch durchfuehren, Ergebnis hier eintragen'",
+        "coinToss-Phase kann entfernt werden"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "priority": "P0",
+      "complexity": "simple"
+    },
+    {
+      "id": "F002",
+      "title": "Weather-Dropdown in Maske 1",
+      "description": "Facilitator waehlt das Wetter bei Spielstart. Nutzt die Engine-Types aus src/engine/types.ts (Weather type) und WeatherSystem.ts fuer Modifikatoren.",
+      "acceptance_criteria": [
+        "Dropdown 'Wetter' in Maske 1 nach Coin Toss Dropdown",
+        "Optionen: clear, rain, snow, wind, fog, hot mit Emojis",
+        "Weather-State im GameState speichern",
+        "Import Weather type aus src/engine/",
+        "Anzeige der aktuellen Wetterbedingung im Spiel-Header"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "dependencies": ["src/engine/types.ts", "src/engine/WeatherSystem.ts"],
+      "priority": "P0",
+      "complexity": "simple"
+    },
+    {
+      "id": "F003",
+      "title": "Formation-Dropdowns in Maske 2",
+      "description": "Offense und Defense waehlen jeweils ihre Formation als Dropdown. Nutzt OffenseFormation und DefenseFormation aus src/engine/types.ts sowie FormationSystem.ts fuer Beschreibungen.",
+      "acceptance_criteria": [
+        "Offense Formation Dropdown unter Offense Play-Auswahl",
+        "Defense Formation Dropdown unter Defense Play-Auswahl",
+        "Optionen aus Engine types: shotgun, i_formation, spread, pistol, wildcat (Offense)",
+        "Optionen: 4-3, 3-4, nickel, dime, prevent (Defense)",
+        "getFormationDescription() fuer lesbare Labels nutzen",
+        "Formation-State im GameState speichern"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "dependencies": ["src/engine/types.ts", "src/engine/FormationSystem.ts"],
+      "priority": "P0",
+      "complexity": "moderate"
+    },
+    {
+      "id": "F004",
+      "title": "Ergebnis-Beschreibungen in Maske 3",
+      "description": "Nach jedem Spielzug wird eine narrative Beschreibung angezeigt. Nutzt DescriptionGenerator.ts fuer headline, narrative und weatherNote.",
+      "acceptance_criteria": [
+        "Nach executePlay(): generateDescription() aufrufen",
+        "Anzeige der Headline (z.B. '+12 Yards (Gain)')",
+        "Anzeige der Narrative (z.B. 'Team 1 passt aus der Shotgun...')",
+        "Anzeige des weatherNote falls vorhanden",
+        "Beschreibung im letzten History-Eintrag speichern",
+        "Styling: Hervorgehobene Box fuer Ergebnis-Beschreibung"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "dependencies": ["src/engine/DescriptionGenerator.ts"],
+      "priority": "P1",
+      "complexity": "moderate",
+      "status": "completed",
+      "completed_date": "2026-01-26"
+    },
+    {
+      "id": "F005",
+      "title": "Formation Bonus Engine Integration",
+      "description": "Integration von calculateFormationBonus() in executePlay() fuer realistische Formation-Matchup-Effekte.",
+      "acceptance_criteria": [
+        "calculateFormationBonus() wird in executePlay() aufgerufen",
+        "Net Bonus (Offense - Defense) als Prozent-Modifier auf Yards angewendet",
+        "Formation-Auswahl beeinflusst Spielausgang"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "dependencies": ["src/engine/FormationSystem.ts"],
+      "priority": "P0",
+      "complexity": "simple",
+      "status": "completed",
+      "completed_date": "2026-01-26"
+    },
+    {
+      "id": "F006",
+      "title": "Weather Modifiers Engine Integration",
+      "description": "Integration von applyWeatherModifiers() in executePlay() fuer Wetter-Effekte auf Spielzuege.",
+      "acceptance_criteria": [
+        "applyWeatherModifiers() wird in executePlay() aufgerufen",
+        "Pass-Accuracy Modifier bei Regen/Schnee/Nebel/Wind",
+        "Run-Efficiency Modifier bei schlechtem Wetter",
+        "Wetter-Auswahl beeinflusst Spielausgang"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "dependencies": ["src/engine/WeatherSystem.ts"],
+      "priority": "P0",
+      "complexity": "simple",
+      "status": "completed",
+      "completed_date": "2026-01-26"
+    },
+    {
+      "id": "F007",
+      "title": "Yard Visualization Spec Compliance",
+      "description": "Korrektur der Yard-Linien Visualisierung auf 10-50 (gespiegelt) statt 0-100.",
+      "acceptance_criteria": [
+        "Nur 10, 20, 30, 40, 50 Yard-Linien angezeigt",
+        "Labels gespiegelt: 10-20-30-40-50-40-30-20-10",
+        "Endzonen bleiben separate Bereiche"
+      ],
+      "files_to_modify": [
+        "src/components/FootballGameSimulator.tsx"
+      ],
+      "priority": "P1",
+      "complexity": "trivial",
+      "status": "completed",
+      "completed_date": "2026-01-26"
+    }
+  ],
+  "technical_notes": {
+    "imports_needed": [
+      "import { Weather, OffenseFormation, DefenseFormation, PlayType, PlayResult } from './engine'",
+      "import { getWeatherModifiers, applyWeatherModifiers, getWeatherImpact } from './engine'",
+      "import { calculateFormationBonus, getFormationDescription } from './engine'",
+      "import { generateDescription, PlayContext, PlayDescription } from './engine'"
+    ],
+    "type_mappings": {
+      "UI_OffensePlay_to_Engine_PlayType": {
+        "Pass": "short_pass",
+        "Lauf": "run",
+        "Screen Pass": "short_pass",
+        "Play Action": "long_pass"
+      }
+    },
+    "state_additions": [
+      "weather: Weather (default: 'clear')",
+      "offenseFormation: OffenseFormation (default: 'shotgun')",
+      "defenseFormation: DefenseFormation (default: '4-3')",
+      "lastPlayDescription: PlayDescription | null"
+    ]
+  }
+}

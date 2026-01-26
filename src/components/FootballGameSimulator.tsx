@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Trophy, RefreshCw } from 'lucide-react';
+import type { Weather, OffenseFormation, DefenseFormation, PlayType, PlayResult as EnginePlayResult, PlayContext, PlayDescription } from '../engine';
+import { getFormationDescription, generateDescription, calculateFormationBonus, applyWeatherModifiers } from '../engine';
 
 // TypeScript Interfaces
 interface Team {
@@ -35,9 +37,12 @@ interface PlayResult {
   newPosition: number;
   event: string;
   possession: string;
+  offenseFormation?: OffenseFormation;
+  defenseFormation?: DefenseFormation;
+  description?: PlayDescription;
 }
 
-type GamePhase = 'setup' | 'coinToss' | 'playing' | 'gameOver';
+type GamePhase = 'setup' | 'playing' | 'gameOver';
 type OffensePlay = 'Pass' | 'Lauf' | 'Screen Pass' | 'Play Action';
 type DefensePlay = 'Blitz' | 'Zone Coverage' | 'Man Coverage' | 'Run Stuff' | 'Prevent Defense';
 
@@ -68,6 +73,8 @@ const FootballGameSimulator: React.FC = () => {
   });
 
   const [maxPlays, setMaxPlays] = useState<number>(20);
+  const [coinTossWinner, setCoinTossWinner] = useState<1 | 2 | null>(null);
+  const [weather, setWeather] = useState<Weather>('clear');
   const [currentPlay, setCurrentPlay] = useState<number>(0);
   const [possession, setPossession] = useState<1 | 2>(1);
   const [yardLine, setYardLine] = useState<number>(35); // 0.1: Start at 35 yards
@@ -78,6 +85,9 @@ const FootballGameSimulator: React.FC = () => {
   const [selectedOffensePlay, setSelectedOffensePlay] = useState<OffensePlay | null>(null);
   const [selectedDefensePlay, setSelectedDefensePlay] = useState<DefensePlay | null>(null);
   const [kickMode, setKickMode] = useState<boolean>(false);
+  const [offenseFormation, setOffenseFormation] = useState<OffenseFormation>('shotgun');
+  const [defenseFormation, setDefenseFormation] = useState<DefenseFormation>('4-3');
+  const [lastPlayDescription, setLastPlayDescription] = useState<PlayDescription | null>(null);
 
   const offensePlays: OffensePlay[] = ['Pass', 'Lauf', 'Screen Pass', 'Play Action'];
   const defensePlays: DefensePlay[] = ['Blitz', 'Zone Coverage', 'Man Coverage', 'Run Stuff', 'Prevent Defense'];
@@ -107,14 +117,32 @@ const FootballGameSimulator: React.FC = () => {
     }
   };
 
-  const startCoinToss = () => {
-    setGamePhase('coinToss');
+  const startGame = () => {
+    if (coinTossWinner) {
+      setPossession(coinTossWinner);
+      setGamePhase('playing');
+    }
   };
 
-  // 0.2: Coin Toss Handler
-  const handleCoinTossSelection = (startingTeam: 1 | 2) => {
-    setPossession(startingTeam);
-    setGamePhase('playing');
+  // Type Mapping Functions
+  const mapOffensePlayToPlayType = (play: OffensePlay): PlayType => {
+    switch (play) {
+      case 'Pass': return 'short_pass';
+      case 'Lauf': return 'run';
+      case 'Screen Pass': return 'short_pass';
+      case 'Play Action': return 'long_pass';
+      default: return 'run';
+    }
+  };
+
+  const mapToEngineResult = (event: string, yards: number): EnginePlayResult => {
+    if (event.includes('TOUCHDOWN')) return 'touchdown';
+    if (event.includes('TURNOVER') || event.includes('Fumble')) return 'fumble';
+    if (event.includes('Interception')) return 'interception';
+    if (event.includes('Sack')) return 'sack';
+    if (yards > 0) return 'gain';
+    if (yards < 0) return 'loss';
+    return 'incomplete';
   };
 
   // Game Logic
@@ -122,6 +150,7 @@ const FootballGameSimulator: React.FC = () => {
     if (!selectedOffensePlay || !selectedDefensePlay) return;
 
     const offenseTeam = possession === 1 ? team1 : team2;
+    const defenseTeam = possession === 1 ? team2 : team1;
 
     let yardsGained = 0;
     let event = '';
@@ -184,9 +213,40 @@ const FootballGameSimulator: React.FC = () => {
         possessionChanged = true;
         yardsGained = 0;
       }
+
+      // Apply Formation Bonus
+      const playType = mapOffensePlayToPlayType(selectedOffensePlay);
+      const formationBonus = calculateFormationBonus(playType, offenseFormation, defenseFormation);
+      const netBonus = formationBonus.offenseBonus - formationBonus.defenseBonus;
+      // Apply as percentage modifier to yards gained
+      if (yardsGained > 0 && netBonus !== 0) {
+        yardsGained = Math.round(yardsGained * (1 + netBonus / 100));
+      }
+
+      // Apply Weather Modifiers
+      const weatherOutcome = applyWeatherModifiers(
+        { result: 'gain', yards: yardsGained },
+        playType,
+        weather
+      );
+      yardsGained = weatherOutcome.yards;
     }
 
     const newYardLine = Math.max(0, Math.min(100, yardLine + yardsGained));
+
+    // Generate play description
+    const playContext: PlayContext = {
+      offenseTeam: offenseTeam.name,
+      defenseTeam: defenseTeam.name,
+      playType: mapOffensePlayToPlayType(selectedOffensePlay),
+      result: mapToEngineResult(event, yardsGained),
+      yards: Math.abs(yardsGained),
+      weather: weather,
+      offenseFormation: offenseFormation,
+      defenseFormation: defenseFormation,
+    };
+    const description = generateDescription(playContext);
+    setLastPlayDescription(description);
 
     // Check for Touchdown
     if (newYardLine >= 100) {
@@ -221,7 +281,10 @@ const FootballGameSimulator: React.FC = () => {
       yards: yardsGained,
       newPosition: possessionChanged ? 35 : newYardLine,
       event,
-      possession: offenseTeam.name
+      possession: offenseTeam.name,
+      offenseFormation,
+      defenseFormation,
+      description
     };
     setHistory([...history, playResult]);
 
@@ -241,6 +304,8 @@ const FootballGameSimulator: React.FC = () => {
 
   const resetGame = () => {
     setGamePhase('setup');
+    setCoinTossWinner(null);
+    setWeather('clear');
     setCurrentPlay(0);
     setPossession(1);
     setYardLine(35);
@@ -248,6 +313,9 @@ const FootballGameSimulator: React.FC = () => {
     setHistory([]);
     setIsLastPlay(false);
     setKickMode(false);
+    setOffenseFormation('shotgun');
+    setDefenseFormation('4-3');
+    setLastPlayDescription(null);
     setTeam1({ ...team1, score: 0 });
     setTeam2({ ...team2, score: 0 });
   };
@@ -277,8 +345,8 @@ const FootballGameSimulator: React.FC = () => {
         {/* Playing Field */}
         <rect x={endzoneWidth} y="0" width={playingFieldWidth} height={fieldHeight} fill="#2d7a2d" />
 
-        {/* Yard Lines */}
-        {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((yard) => {
+        {/* Yard Lines (10-50 mirrored) */}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map((yard) => {
           const x = endzoneWidth + (yard / 100) * playingFieldWidth;
           const label = yard <= 50 ? yard : 100 - yard;
           return (
@@ -336,6 +404,36 @@ const FootballGameSimulator: React.FC = () => {
                 className="w-full px-4 py-2 border rounded"
                 min="1"
               />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Wer hat den Coin Toss gewonnen?</label>
+              <select
+                value={coinTossWinner ?? ''}
+                onChange={(e) => setCoinTossWinner(e.target.value ? Number(e.target.value) as 1 | 2 : null)}
+                className="w-full px-4 py-2 border rounded"
+              >
+                <option value="">-- Bitte wählen --</option>
+                <option value="1">{team1.name}</option>
+                <option value="2">{team2.name}</option>
+              </select>
+              <p className="text-sm text-gray-600 mt-2">
+                Münzwurf physisch durchführen, Ergebnis hier eintragen
+              </p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Wetter:</label>
+              <select
+                value={weather}
+                onChange={(e) => setWeather(e.target.value as Weather)}
+                className="w-full px-4 py-2 border rounded"
+              >
+                <option value="clear">☀️ Klar</option>
+                <option value="rain">🌧️ Regen</option>
+                <option value="snow">❄️ Schnee</option>
+                <option value="wind">💨 Wind</option>
+                <option value="fog">🌫️ Nebel</option>
+                <option value="hot">🔥 Hitze</option>
+              </select>
             </div>
           </div>
 
@@ -415,41 +513,15 @@ const FootballGameSimulator: React.FC = () => {
 
           <div className="mt-6 text-center">
             <button
-              onClick={startCoinToss}
-              className="px-8 py-4 bg-green-600 text-white rounded-lg font-bold text-xl hover:bg-green-700"
+              onClick={startGame}
+              disabled={coinTossWinner === null}
+              className={`px-8 py-4 rounded-lg font-bold text-xl ${
+                coinTossWinner !== null
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
-              Weiter zum Coin Toss
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 0.2: Coin Toss Phase
-  if (gamePhase === 'coinToss') {
-    return (
-      <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center">
-        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-4xl font-bold text-center mb-8 text-blue-900">
-            🪙 Coin Toss
-          </h1>
-          <p className="text-xl text-center mb-8">
-            Welches Team startet mit Ballbesitz (Offense)?
-          </p>
-
-          <div className="flex gap-6 justify-center">
-            <button
-              onClick={() => handleCoinTossSelection(1)}
-              className="px-8 py-6 bg-blue-600 text-white rounded-lg font-bold text-2xl hover:bg-blue-700"
-            >
-              {team1.name}
-            </button>
-            <button
-              onClick={() => handleCoinTossSelection(2)}
-              className="px-8 py-6 bg-red-600 text-white rounded-lg font-bold text-2xl hover:bg-red-700"
-            >
-              {team2.name}
+              Spiel starten
             </button>
           </div>
         </div>
@@ -463,15 +535,39 @@ const FootballGameSimulator: React.FC = () => {
     const defenseTeam = possession === 1 ? team2 : team1;
     const canKick = yardLine <= 30; // Field goal range
 
+    // Weather emoji mapping
+    const weatherEmojis: Record<Weather, string> = {
+      clear: '☀️',
+      rain: '🌧️',
+      snow: '❄️',
+      wind: '💨',
+      fog: '🌫️',
+      hot: '🔥'
+    };
+
+    const weatherLabels: Record<Weather, string> = {
+      clear: 'Klar',
+      rain: 'Regen',
+      snow: 'Schnee',
+      wind: 'Wind',
+      fog: 'Nebel',
+      hot: 'Hitze'
+    };
+
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-3xl font-bold text-blue-900">
-                ⚡ Spielzug {currentPlay + 1}/{maxPlays}
-              </h1>
+              <div>
+                <h1 className="text-3xl font-bold text-blue-900">
+                  ⚡ Spielzug {currentPlay + 1}/{maxPlays}
+                </h1>
+                <p className="text-lg text-gray-700 mt-1">
+                  Wetter: {weatherEmojis[weather]} {weatherLabels[weather]}
+                </p>
+              </div>
               <div className="flex gap-4 items-center">
                 {/* 0.4: Last Play Checkbox */}
                 <label className="flex items-center gap-2 text-lg font-medium">
@@ -519,6 +615,17 @@ const FootballGameSimulator: React.FC = () => {
             {renderField()}
           </div>
 
+          {/* Play Description */}
+          {lastPlayDescription && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow mb-6">
+              <h3 className="text-xl font-bold mb-2">{lastPlayDescription.headline}</h3>
+              <p className="text-gray-700 mb-2">{lastPlayDescription.narrative}</p>
+              {lastPlayDescription.weatherNote && (
+                <p className="text-sm text-blue-600">{lastPlayDescription.weatherNote}</p>
+              )}
+            </div>
+          )}
+
           {/* Play Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Offense Plays */}
@@ -552,6 +659,20 @@ const FootballGameSimulator: React.FC = () => {
                         {play}
                       </button>
                     ))}
+                  </div>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium mb-2">Formation:</label>
+                    <select
+                      value={offenseFormation}
+                      onChange={(e) => setOffenseFormation(e.target.value as OffenseFormation)}
+                      className="w-full px-4 py-2 border rounded bg-blue-50"
+                    >
+                      <option value="shotgun">{getFormationDescription('shotgun')}</option>
+                      <option value="i_formation">{getFormationDescription('i_formation')}</option>
+                      <option value="spread">{getFormationDescription('spread')}</option>
+                      <option value="pistol">{getFormationDescription('pistol')}</option>
+                      <option value="wildcat">{getFormationDescription('wildcat')}</option>
+                    </select>
                   </div>
                   {canKick && (
                     <button
@@ -587,6 +708,20 @@ const FootballGameSimulator: React.FC = () => {
                     {play}
                   </button>
                 ))}
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-2">Formation:</label>
+                <select
+                  value={defenseFormation}
+                  onChange={(e) => setDefenseFormation(e.target.value as DefenseFormation)}
+                  className="w-full px-4 py-2 border rounded bg-red-50"
+                >
+                  <option value="4-3">{getFormationDescription('4-3')}</option>
+                  <option value="3-4">{getFormationDescription('3-4')}</option>
+                  <option value="nickel">{getFormationDescription('nickel')}</option>
+                  <option value="dime">{getFormationDescription('dime')}</option>
+                  <option value="prevent">{getFormationDescription('prevent')}</option>
+                </select>
               </div>
             </div>
           </div>

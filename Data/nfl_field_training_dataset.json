@@ -1,0 +1,108 @@
+{
+  "field_description": {
+    "name": "NFL_Field_Model",
+    "purpose": "Yard calculation and game simulation",
+    "surface": [
+      "green_playzone",
+      "brown_endzone"
+    ]
+  },
+  "center_line": {
+    "name": "Midfield",
+    "yard_marker": 50,
+    "function": "Divides field into two halves"
+  },
+  "zones": {
+    "playzone_1": {
+      "side": "left",
+      "team": "team_1",
+      "color": "green",
+      "yard_lines": [
+        {
+          "label": "40",
+          "color": "white"
+        },
+        {
+          "label": "30",
+          "color": "white"
+        },
+        {
+          "label": "20",
+          "color": "white"
+        },
+        {
+          "label": "10",
+          "color": "white"
+        }
+      ],
+      "endzone_start": "after_10_yard",
+      "orientation": "towards_left_goal"
+    },
+    "playzone_2": {
+      "side": "right",
+      "team": "team_2",
+      "color": "green",
+      "yard_lines": [
+        {
+          "label": "40",
+          "color": "white"
+        },
+        {
+          "label": "30",
+          "color": "white"
+        },
+        {
+          "label": "20",
+          "color": "white"
+        },
+        {
+          "label": "10",
+          "color": "white"
+        }
+      ],
+      "endzone_start": "after_10_yard",
+      "orientation": "towards_right_goal"
+    }
+  },
+  "endzones": {
+    "endzone_1": {
+      "side": "left",
+      "team": "team_1",
+      "color": "brown",
+      "yard_labels": false,
+      "goal": "goal_1"
+    },
+    "endzone_2": {
+      "side": "right",
+      "team": "team_2",
+      "color": "brown",
+      "yard_labels": false,
+      "goal": "goal_2"
+    }
+  },
+  "goals": {
+    "goal_1": {
+      "location": "center_endzone_1",
+      "color": "yellow",
+      "team": "team_1"
+    },
+    "goal_2": {
+      "location": "center_endzone_2",
+      "color": "yellow",
+      "team": "team_2"
+    }
+  },
+  "training_annotations": {
+    "usage": [
+      "yard_gain_calculation",
+      "field_position_mapping",
+      "touchdown_detection",
+      "zone_transition_logic"
+    ],
+    "coordinate_system": {
+      "min": 0,
+      "max": 100,
+      "midfield": 50
+    }
+  }
+}

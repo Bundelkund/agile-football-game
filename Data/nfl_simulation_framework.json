@@ -1,0 +1,352 @@
+{
+  "player_roles": [
+    {
+      "id": "QB",
+      "unit": "offense",
+      "skills": [
+        "passing",
+        "leadership",
+        "vision"
+      ],
+      "stats": [
+        "pass_yards",
+        "td",
+        "int"
+      ]
+    },
+    {
+      "id": "RB",
+      "unit": "offense",
+      "skills": [
+        "speed",
+        "balance",
+        "vision"
+      ],
+      "stats": [
+        "rush_yards",
+        "td",
+        "fumbles"
+      ]
+    },
+    {
+      "id": "WR",
+      "unit": "offense",
+      "skills": [
+        "speed",
+        "catching",
+        "routes"
+      ],
+      "stats": [
+        "rec_yards",
+        "td",
+        "drops"
+      ]
+    },
+    {
+      "id": "TE",
+      "unit": "offense",
+      "skills": [
+        "blocking",
+        "catching"
+      ],
+      "stats": [
+        "rec_yards",
+        "td",
+        "blocks"
+      ]
+    },
+    {
+      "id": "OL",
+      "unit": "offense",
+      "skills": [
+        "blocking",
+        "strength"
+      ],
+      "stats": [
+        "sacks_allowed",
+        "penalties"
+      ]
+    },
+    {
+      "id": "DT",
+      "unit": "defense",
+      "skills": [
+        "strength",
+        "shed_blocks"
+      ],
+      "stats": [
+        "tackles",
+        "sacks"
+      ]
+    },
+    {
+      "id": "DE",
+      "unit": "defense",
+      "skills": [
+        "pass_rush",
+        "speed"
+      ],
+      "stats": [
+        "sacks",
+        "pressures"
+      ]
+    },
+    {
+      "id": "LB",
+      "unit": "defense",
+      "skills": [
+        "tackling",
+        "coverage"
+      ],
+      "stats": [
+        "tackles",
+        "ints",
+        "sacks"
+      ]
+    },
+    {
+      "id": "CB",
+      "unit": "defense",
+      "skills": [
+        "coverage",
+        "speed"
+      ],
+      "stats": [
+        "ints",
+        "pb",
+        "td_allowed"
+      ]
+    },
+    {
+      "id": "S",
+      "unit": "defense",
+      "skills": [
+        "coverage",
+        "tackling"
+      ],
+      "stats": [
+        "ints",
+        "tackles"
+      ]
+    },
+    {
+      "id": "K",
+      "unit": "special",
+      "skills": [
+        "accuracy",
+        "power"
+      ],
+      "stats": [
+        "fg_made",
+        "xp_made"
+      ]
+    },
+    {
+      "id": "P",
+      "unit": "special",
+      "skills": [
+        "hangtime",
+        "accuracy"
+      ],
+      "stats": [
+        "punt_avg",
+        "inside20"
+      ]
+    }
+  ],
+  "formations": {
+    "offense": [
+      {
+        "name": "I-Formation",
+        "QB": 1,
+        "RB": 1,
+        "FB": 1,
+        "WR": 2,
+        "TE": 1,
+        "OL": 5
+      },
+      {
+        "name": "Shotgun",
+        "QB": 1,
+        "RB": 1,
+        "WR": 3,
+        "TE": 1,
+        "OL": 5
+      },
+      {
+        "name": "Spread",
+        "QB": 1,
+        "RB": 1,
+        "WR": 4,
+        "TE": 0,
+        "OL": 5
+      },
+      {
+        "name": "GoalLine",
+        "QB": 1,
+        "RB": 2,
+        "FB": 1,
+        "TE": 2,
+        "OL": 5
+      }
+    ],
+    "defense": [
+      {
+        "name": "4-3",
+        "DL": 4,
+        "LB": 3,
+        "CB": 2,
+        "S": 2
+      },
+      {
+        "name": "3-4",
+        "DL": 3,
+        "LB": 4,
+        "CB": 2,
+        "S": 2
+      },
+      {
+        "name": "Nickel",
+        "DL": 4,
+        "LB": 2,
+        "CB": 3,
+        "S": 2
+      },
+      {
+        "name": "Dime",
+        "DL": 4,
+        "LB": 1,
+        "CB": 4,
+        "S": 2
+      }
+    ]
+  },
+  "game_state_templates": [
+    {
+      "state_id": "GS001",
+      "quarter": 1,
+      "time_left": 900,
+      "down": 1,
+      "distance": 10,
+      "yardline": 25,
+      "score_diff": 0
+    },
+    {
+      "state_id": "GS002",
+      "quarter": 4,
+      "time_left": 120,
+      "down": 4,
+      "distance": 5,
+      "yardline": 45,
+      "score_diff": -3
+    },
+    {
+      "state_id": "GS003",
+      "quarter": 2,
+      "time_left": 300,
+      "down": 3,
+      "distance": 8,
+      "yardline": 70,
+      "score_diff": 7
+    },
+    {
+      "state_id": "GS004",
+      "quarter": 4,
+      "time_left": 30,
+      "down": 2,
+      "distance": 12,
+      "yardline": 20,
+      "score_diff": -6
+    }
+  ],
+  "stat_generators": {
+    "QB": {
+      "pass_yards": {
+        "min": 150,
+        "max": 450
+      },
+      "td": {
+        "min": 0,
+        "max": 5
+      },
+      "int": {
+        "min": 0,
+        "max": 4
+      },
+      "completion_rate": {
+        "min": 0.5,
+        "max": 0.75
+      }
+    },
+    "RB": {
+      "rush_yards": {
+        "min": 30,
+        "max": 200
+      },
+      "td": {
+        "min": 0,
+        "max": 3
+      },
+      "fumbles": {
+        "min": 0,
+        "max": 2
+      }
+    },
+    "WR": {
+      "rec_yards": {
+        "min": 20,
+        "max": 220
+      },
+      "td": {
+        "min": 0,
+        "max": 3
+      },
+      "drops": {
+        "min": 0,
+        "max": 3
+      }
+    },
+    "LB": {
+      "tackles": {
+        "min": 3,
+        "max": 15
+      },
+      "sacks": {
+        "min": 0,
+        "max": 3
+      },
+      "ints": {
+        "min": 0,
+        "max": 2
+      }
+    },
+    "CB": {
+      "ints": {
+        "min": 0,
+        "max": 3
+      },
+      "pb": {
+        "min": 0,
+        "max": 5
+      },
+      "td_allowed": {
+        "min": 0,
+        "max": 2
+      }
+    },
+    "K": {
+      "fg_made": {
+        "min": 0,
+        "max": 5
+      },
+      "xp_made": {
+        "min": 0,
+        "max": 6
+      },
+      "fg_accuracy": {
+        "min": 0.7,
+        "max": 0.95
+      }
+    }
+  }
+}
