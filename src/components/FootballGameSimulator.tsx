@@ -565,11 +565,12 @@ const FootballGameSimulator: React.FC = () => {
     return formations[formation];
   };
 
-  // 0.3: SVG Field Visualization with KON-43 Formation Display
+  // 0.3 + KON-49: SVG Field Visualization with KON-43 Formation Display
+  // Field size increased by 25% for better visibility
   const renderField = () => {
-    const fieldWidth = 800;
-    const fieldHeight = 200;
-    const endzoneWidth = 60;
+    const fieldWidth = 1000;  // was 800, +25%
+    const fieldHeight = 250;  // was 200, +25%
+    const endzoneWidth = 75;  // was 60, +25%
     const playingFieldWidth = fieldWidth - 2 * endzoneWidth;
 
     // Ball position (0-100 yards maps to playing field)
@@ -581,7 +582,7 @@ const FootballGameSimulator: React.FC = () => {
     const defensePositions = getDefenseFormationPositions(defenseFormation);
 
     return (
-      <svg width={fieldWidth} height={fieldHeight} className="border border-gray-300 mx-auto">
+      <svg width={fieldWidth} height={fieldHeight} className="border border-gray-300 mx-auto" style={{maxWidth: '100%'}}>
         {/* Endzone 1 */}
         <rect x="0" y="0" width={endzoneWidth} height={fieldHeight} fill="#8B4513" />
         <text x={endzoneWidth / 2} y={fieldHeight / 2} textAnchor="middle" fill="white" fontSize="14" fontWeight="bold">
@@ -621,39 +622,40 @@ const FootballGameSimulator: React.FC = () => {
           END
         </text>
 
-        {/* KON-43 + KON-48: Offense Formation (Blue circles) - LEFT of ball */}
+        {/* KON-43 + KON-48 + KON-49: Offense Formation (Blue circles) - LEFT of ball */}
+        {/* Player sizes increased by 25% for better visibility */}
         {offensePositions.map((pos, idx) => {
           // x = depth (negative = behind LOS, toward own endzone)
           // y = spread (vertical position on field)
-          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.2));
-          const playerY = Math.max(12, Math.min(fieldHeight - 12, centerY + pos.y * 1.8));
+          const playerX = Math.max(endzoneWidth + 12, Math.min(fieldWidth - endzoneWidth - 12, ballX + pos.x * 1.5));
+          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y * 2.25));
           return (
             <g key={`off-${idx}`}>
-              <circle cx={playerX} cy={playerY} r="7" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
-              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
+              <circle cx={playerX} cy={playerY} r="9" fill="#3b82f6" stroke="white" strokeWidth="2" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
                 {pos.label}
               </text>
             </g>
           );
         })}
 
-        {/* KON-43 + KON-48: Defense Formation (Red circles) - RIGHT of ball */}
+        {/* KON-43 + KON-48 + KON-49: Defense Formation (Red circles) - RIGHT of ball */}
         {defensePositions.map((pos, idx) => {
-          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.2));
-          const playerY = Math.max(12, Math.min(fieldHeight - 12, centerY + pos.y * 1.8));
+          const playerX = Math.max(endzoneWidth + 12, Math.min(fieldWidth - endzoneWidth - 12, ballX + pos.x * 1.5));
+          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y * 2.25));
           return (
             <g key={`def-${idx}`}>
-              <circle cx={playerX} cy={playerY} r="7" fill="#ef4444" stroke="white" strokeWidth="1.5" />
-              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
+              <circle cx={playerX} cy={playerY} r="9" fill="#ef4444" stroke="white" strokeWidth="2" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
                 {pos.label}
               </text>
             </g>
           );
         })}
 
-        {/* Ball Position (on top) */}
-        <circle cx={ballX} cy={centerY} r="10" fill="orange" stroke="black" strokeWidth="2" />
-        <text x={ballX} y={centerY + 4} textAnchor="middle" fill="black" fontSize="10" fontWeight="bold">
+        {/* Ball Position (on top) - also 25% larger */}
+        <circle cx={ballX} cy={centerY} r="12" fill="orange" stroke="black" strokeWidth="2" />
+        <text x={ballX} y={centerY + 5} textAnchor="middle" fill="black" fontSize="12" fontWeight="bold">
           🏈
         </text>
       </svg>
@@ -905,6 +907,21 @@ const FootballGameSimulator: React.FC = () => {
             </div>
           )}
 
+          {/* KON-42 + KON-49: Strategy Preview - Centered above play selection */}
+          {selectedOffensePlay && (
+            <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
+              <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
+              <p className="text-center text-lg font-medium text-gray-800">
+                {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
+              </p>
+              {!selectedDefensePlay && (
+                <p className="text-center text-sm text-gray-500 mt-1">
+                  (Wähle Defense-Spielzug für spezifische Vorhersage)
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Play Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Offense Plays */}
@@ -939,14 +956,6 @@ const FootballGameSimulator: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                  {/* KON-42: Strategy Preview */}
-                  {selectedOffensePlay && (
-                    <div className="mt-3 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
-                      <p className="text-sm font-medium text-blue-800">
-                        {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
-                      </p>
-                    </div>
-                  )}
                   <div className="mt-4">
                     <label className="block text-sm font-medium mb-2">Formation:</label>
                     <select
