@@ -1,164 +1,103 @@
 {
   "project": "agile-football-game",
-  "phase": "Phase 4 - Engine Integration",
-  "version": "1.1.0",
+  "phase": "Phase 5 - P0 Blocker Fixes",
+  "version": "1.2.0",
   "context": {
-    "description": "Engine-Funktionen (Formation Bonus, Weather Modifiers) in UI integriert",
+    "description": "Critical bug fixes from user feedback - Down System, Scoreboard, UI",
     "repository": "C:/Users/flori/github/agile-football-game",
     "engine_location": "src/engine/",
-    "ui_component": "src/components/FootballGameSimulator.tsx"
+    "ui_component": "src/components/FootballGameSimulator.tsx",
+    "linear_issues": ["KON-37", "KON-38", "KON-39"]
   },
   "features": [
     {
-      "id": "F001",
-      "title": "Coin Toss Dropdown in Maske 1",
-      "description": "Der analoge Coin Toss wird physisch durchgeführt, das Ergebnis wird per Dropdown eingegeben. Dropdown soll in der Setup-Phase (gamePhase='setup') erscheinen statt als separate coinToss-Phase mit Buttons.",
+      "id": "KON-37",
+      "title": "Down-System: First Down Reset",
+      "description": "Das Down-System funktioniert nicht korrekt. Bei einem First Down (10+ Yards Gewinn) muessen die Downs auf 1 zurueckgesetzt werden.",
       "acceptance_criteria": [
-        "Dropdown 'Wer hat den Coin Toss gewonnen?' in Maske 1 (Setup)",
-        "Optionen: Team 1 Name / Team 2 Name (dynamisch)",
-        "Auswahl bestimmt Starting Possession",
-        "Hinweistext: 'Muenzwurf physisch durchfuehren, Ergebnis hier eintragen'",
-        "coinToss-Phase kann entfernt werden"
+        "Neuer State: down (1-4), yardsToGo (default 10), lineOfScrimmage",
+        "First Down Erkennung: Wenn total yards >= yardsToGo, dann down=1, yardsToGo=10",
+        "Down-Increment: Nach jedem Spielzug ohne First Down: down++",
+        "Turnover on Downs: Bei 4th Down ohne First Down -> Ballwechsel",
+        "Reset nach Possession Change: down=1, yardsToGo=10",
+        "Entferne alten playsWithoutChange-Mechanismus"
       ],
       "files_to_modify": [
         "src/components/FootballGameSimulator.tsx"
       ],
       "priority": "P0",
-      "complexity": "simple"
-    },
-    {
-      "id": "F002",
-      "title": "Weather-Dropdown in Maske 1",
-      "description": "Facilitator waehlt das Wetter bei Spielstart. Nutzt die Engine-Types aus src/engine/types.ts (Weather type) und WeatherSystem.ts fuer Modifikatoren.",
-      "acceptance_criteria": [
-        "Dropdown 'Wetter' in Maske 1 nach Coin Toss Dropdown",
-        "Optionen: clear, rain, snow, wind, fog, hot mit Emojis",
-        "Weather-State im GameState speichern",
-        "Import Weather type aus src/engine/",
-        "Anzeige der aktuellen Wetterbedingung im Spiel-Header"
-      ],
-      "files_to_modify": [
-        "src/components/FootballGameSimulator.tsx"
-      ],
-      "dependencies": ["src/engine/types.ts", "src/engine/WeatherSystem.ts"],
-      "priority": "P0",
-      "complexity": "simple"
-    },
-    {
-      "id": "F003",
-      "title": "Formation-Dropdowns in Maske 2",
-      "description": "Offense und Defense waehlen jeweils ihre Formation als Dropdown. Nutzt OffenseFormation und DefenseFormation aus src/engine/types.ts sowie FormationSystem.ts fuer Beschreibungen.",
-      "acceptance_criteria": [
-        "Offense Formation Dropdown unter Offense Play-Auswahl",
-        "Defense Formation Dropdown unter Defense Play-Auswahl",
-        "Optionen aus Engine types: shotgun, i_formation, spread, pistol, wildcat (Offense)",
-        "Optionen: 4-3, 3-4, nickel, dime, prevent (Defense)",
-        "getFormationDescription() fuer lesbare Labels nutzen",
-        "Formation-State im GameState speichern"
-      ],
-      "files_to_modify": [
-        "src/components/FootballGameSimulator.tsx"
-      ],
-      "dependencies": ["src/engine/types.ts", "src/engine/FormationSystem.ts"],
-      "priority": "P0",
-      "complexity": "moderate"
-    },
-    {
-      "id": "F004",
-      "title": "Ergebnis-Beschreibungen in Maske 3",
-      "description": "Nach jedem Spielzug wird eine narrative Beschreibung angezeigt. Nutzt DescriptionGenerator.ts fuer headline, narrative und weatherNote.",
-      "acceptance_criteria": [
-        "Nach executePlay(): generateDescription() aufrufen",
-        "Anzeige der Headline (z.B. '+12 Yards (Gain)')",
-        "Anzeige der Narrative (z.B. 'Team 1 passt aus der Shotgun...')",
-        "Anzeige des weatherNote falls vorhanden",
-        "Beschreibung im letzten History-Eintrag speichern",
-        "Styling: Hervorgehobene Box fuer Ergebnis-Beschreibung"
-      ],
-      "files_to_modify": [
-        "src/components/FootballGameSimulator.tsx"
-      ],
-      "dependencies": ["src/engine/DescriptionGenerator.ts"],
-      "priority": "P1",
       "complexity": "moderate",
-      "status": "completed",
-      "completed_date": "2026-01-26"
+      "passes": true,
+      "tested_at": "2026-02-03T10:30:00Z",
+      "notes": "Implemented proper NFL down system with First Down detection, Goal-to-go logic, and Turnover on Downs"
     },
     {
-      "id": "F005",
-      "title": "Formation Bonus Engine Integration",
-      "description": "Integration von calculateFormationBonus() in executePlay() fuer realistische Formation-Matchup-Effekte.",
+      "id": "KON-39",
+      "title": "Down-Anzeige in UI",
+      "description": "Die Down-Anzeige fehlt in der Spielansicht.",
       "acceptance_criteria": [
-        "calculateFormationBonus() wird in executePlay() aufgerufen",
-        "Net Bonus (Offense - Defense) als Prozent-Modifier auf Yards angewendet",
-        "Formation-Auswahl beeinflusst Spielausgang"
+        "Down-Anzeige im Header-Bereich (nach Ballbesitz)",
+        "Format: '1st & 10', '2nd & 3', '3rd & Goal' (wenn <10 yards zur Endzone)",
+        "Farbcodierung: 1st/2nd gruen, 3rd gelb, 4th rot",
+        "Yards to go berechnen: yardsToGo oder (100 - yardLine) wenn naeher",
+        "Ersetze 'Spielzuege seit letztem Wechsel' mit Down-Info"
       ],
       "files_to_modify": [
         "src/components/FootballGameSimulator.tsx"
       ],
-      "dependencies": ["src/engine/FormationSystem.ts"],
+      "dependencies": ["KON-37"],
       "priority": "P0",
       "complexity": "simple",
-      "status": "completed",
-      "completed_date": "2026-01-26"
+      "passes": true,
+      "tested_at": "2026-02-03T10:30:00Z",
+      "notes": "Down display shows '1. Down & 10 Yards to Go' format in blue bold text"
     },
     {
-      "id": "F006",
-      "title": "Weather Modifiers Engine Integration",
-      "description": "Integration von applyWeatherModifiers() in executePlay() fuer Wetter-Effekte auf Spielzuege.",
+      "id": "KON-38",
+      "title": "Scoreboard Fix",
+      "description": "Scoreboard zeigt angeblich immer 1:0 oder 2:0 wegen React setState async issue.",
       "acceptance_criteria": [
-        "applyWeatherModifiers() wird in executePlay() aufgerufen",
-        "Pass-Accuracy Modifier bei Regen/Schnee/Nebel/Wind",
-        "Run-Efficiency Modifier bei schlechtem Wetter",
-        "Wetter-Auswahl beeinflusst Spielausgang"
+        "Score-Updates sofort sichtbar nach Touchdown",
+        "Score-Updates sofort sichtbar nach Field Goal",
+        "Korrekte Score-Addition (nicht Reset auf 6 oder 3)",
+        "Score korrekt im History-Eintrag anzeigen",
+        "Score korrekt im Game Over Screen"
       ],
       "files_to_modify": [
         "src/components/FootballGameSimulator.tsx"
       ],
-      "dependencies": ["src/engine/WeatherSystem.ts"],
       "priority": "P0",
       "complexity": "simple",
-      "status": "completed",
-      "completed_date": "2026-01-26"
-    },
-    {
-      "id": "F007",
-      "title": "Yard Visualization Spec Compliance",
-      "description": "Korrektur der Yard-Linien Visualisierung auf 10-50 (gespiegelt) statt 0-100.",
-      "acceptance_criteria": [
-        "Nur 10, 20, 30, 40, 50 Yard-Linien angezeigt",
-        "Labels gespiegelt: 10-20-30-40-50-40-30-20-10",
-        "Endzonen bleiben separate Bereiche"
-      ],
-      "files_to_modify": [
-        "src/components/FootballGameSimulator.tsx"
-      ],
-      "priority": "P1",
-      "complexity": "trivial",
-      "status": "completed",
-      "completed_date": "2026-01-26"
+      "passes": true,
+      "tested_at": "2026-02-03T10:35:00Z",
+      "notes": "Fixed using functional setState: setTeam1(prev => ({...prev, score: prev.score + N}))"
     }
   ],
   "technical_notes": {
-    "imports_needed": [
-      "import { Weather, OffenseFormation, DefenseFormation, PlayType, PlayResult } from './engine'",
-      "import { getWeatherModifiers, applyWeatherModifiers, getWeatherImpact } from './engine'",
-      "import { calculateFormationBonus, getFormationDescription } from './engine'",
-      "import { generateDescription, PlayContext, PlayDescription } from './engine'"
-    ],
-    "type_mappings": {
-      "UI_OffensePlay_to_Engine_PlayType": {
-        "Pass": "short_pass",
-        "Lauf": "run",
-        "Screen Pass": "short_pass",
-        "Play Action": "long_pass"
-      }
-    },
     "state_additions": [
-      "weather: Weather (default: 'clear')",
-      "offenseFormation: OffenseFormation (default: 'shotgun')",
-      "defenseFormation: DefenseFormation (default: '4-3')",
-      "lastPlayDescription: PlayDescription | null"
-    ]
+      "down: number (1-4, default: 1)",
+      "yardsToGo: number (default: 10)",
+      "lineOfScrimmage: number (Startposition des Drives)"
+    ],
+    "state_removals": [
+      "playsWithoutChange (durch down-System ersetzen)"
+    ],
+    "football_rules": {
+      "first_down": "10 Yards Gewinn vom lineOfScrimmage oder Touchdown-Linie erreicht",
+      "downs": "4 Versuche um 10 Yards zu schaffen",
+      "turnover_on_downs": "Wenn 4th Down ohne First Down -> Ballwechsel",
+      "goal_line": "Wenn weniger als 10 Yards zur Endzone, dann 'X & Goal'"
+    }
+  },
+  "execution_order": [
+    "KON-37 (Down-System zuerst - Basis fuer KON-39)",
+    "KON-39 (UI abhaengig von Down-State)",
+    "KON-38 (Scoreboard unabhaengig, parallel moeglich)"
+  ],
+  "qa_gate": {
+    "status": "APPROVED",
+    "tested_at": "2026-02-03T10:40:00Z",
+    "criteria_passed": 9,
+    "criteria_total": 9
   }
 }

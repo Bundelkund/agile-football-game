@@ -78,7 +78,9 @@ const FootballGameSimulator: React.FC = () => {
   const [currentPlay, setCurrentPlay] = useState<number>(0);
   const [possession, setPossession] = useState<1 | 2>(1);
   const [yardLine, setYardLine] = useState<number>(35); // 0.1: Start at 35 yards
-  const [playsWithoutChange, setPlaysWithoutChange] = useState<number>(0);
+  const [down, setDown] = useState<1 | 2 | 3 | 4>(1); // Current down (1-4)
+  const [yardsToGo, setYardsToGo] = useState<number>(10); // Yards needed for first down
+  const [lineOfScrimmage, setLineOfScrimmage] = useState<number>(35); // Starting position of drive
   const [history, setHistory] = useState<PlayResult[]>([]);
   const [isLastPlay, setIsLastPlay] = useState<boolean>(false); // 0.4: Last play checkbox
 
@@ -165,9 +167,9 @@ const FootballGameSimulator: React.FC = () => {
       if (success) {
         event = `Field Goal ERFOLG! (+3 Punkte)`;
         if (possession === 1) {
-          setTeam1({ ...team1, score: team1.score + 3 });
+          setTeam1(prev => ({ ...prev, score: prev.score + 3 }));
         } else {
-          setTeam2({ ...team2, score: team2.score + 3 });
+          setTeam2(prev => ({ ...prev, score: prev.score + 3 }));
         }
         possessionChanged = true;
       } else {
@@ -252,25 +254,59 @@ const FootballGameSimulator: React.FC = () => {
     if (newYardLine >= 100) {
       event = 'TOUCHDOWN! (+6 Punkte)';
       if (possession === 1) {
-        setTeam1({ ...team1, score: team1.score + 6 });
+        setTeam1(prev => ({ ...prev, score: prev.score + 6 }));
       } else {
-        setTeam2({ ...team2, score: team2.score + 6 });
+        setTeam2(prev => ({ ...prev, score: prev.score + 6 }));
       }
       possessionChanged = true;
     }
 
-    // 0.5: Possession change logic
-    const newPlaysWithoutChange = possessionChanged ? 0 : playsWithoutChange + 1;
+    // Down System Logic
+    let newDown = down;
+    let newYardsToGo = yardsToGo;
+    let newLineOfScrimmage = lineOfScrimmage;
+    let newYardLineValue = newYardLine;
 
-    // Change possession after 4 plays minimum or if forced
-    if (newPlaysWithoutChange >= 4 || possessionChanged) {
+    if (!possessionChanged) {
+      // Calculate yards gained from line of scrimmage
+      const yardsGainedFromLOS = newYardLine - lineOfScrimmage;
+
+      // Check for First Down
+      if (yardsGainedFromLOS >= yardsToGo) {
+        // FIRST DOWN!
+        event += ' | FIRST DOWN!';
+        newDown = 1;
+        newLineOfScrimmage = newYardLine;
+
+        // Calculate new yards to go (goal-to-go if less than 10 yards to endzone)
+        const yardsToEndzone = 100 - newYardLine;
+        newYardsToGo = Math.min(10, yardsToEndzone);
+      } else {
+        // No First Down - increment down
+        if (down < 4) {
+          newDown = (down + 1) as 1 | 2 | 3 | 4;
+          newYardsToGo = yardsToGo - yardsGainedFromLOS;
+        } else {
+          // 4th Down without First Down - Turnover on Downs
+          event += ' | TURNOVER ON DOWNS!';
+          possessionChanged = true;
+        }
+      }
+    }
+
+    // Handle Possession Changes
+    if (possessionChanged) {
       setPossession(possession === 1 ? 2 : 1);
-      setYardLine(35); // 0.1: Reset to 35 yards
-      setPlaysWithoutChange(0);
+      setYardLine(35);
+      setDown(1);
+      setYardsToGo(10);
+      setLineOfScrimmage(35);
       event += ' | BALLBESITZWECHSEL';
     } else {
-      setYardLine(newYardLine);
-      setPlaysWithoutChange(newPlaysWithoutChange);
+      setYardLine(newYardLineValue);
+      setDown(newDown);
+      setYardsToGo(newYardsToGo);
+      setLineOfScrimmage(newLineOfScrimmage);
     }
 
     // Update history
@@ -309,7 +345,9 @@ const FootballGameSimulator: React.FC = () => {
     setCurrentPlay(0);
     setPossession(1);
     setYardLine(35);
-    setPlaysWithoutChange(0);
+    setDown(1);
+    setYardsToGo(10);
+    setLineOfScrimmage(35);
     setHistory([]);
     setIsLastPlay(false);
     setKickMode(false);
@@ -598,13 +636,13 @@ const FootballGameSimulator: React.FC = () => {
               </div>
             </div>
 
-            {/* Field Position */}
+            {/* Field Position & Down Info */}
             <div className="text-center mt-4">
               <p className="text-xl">
                 <strong>Ballbesitz:</strong> {offenseTeam.name} (Offense) | {yardLine} Yards
               </p>
-              <p className="text-sm text-gray-600">
-                Spielzüge seit letztem Wechsel: {playsWithoutChange}
+              <p className="text-lg font-bold text-blue-600">
+                {down}. Down & {yardsToGo} {yardsToGo === 1 ? 'Yard' : 'Yards'} to Go
               </p>
             </div>
           </div>
