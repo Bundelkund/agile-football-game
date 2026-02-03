@@ -94,6 +94,51 @@ const FootballGameSimulator: React.FC = () => {
   const offensePlays: OffensePlay[] = ['Pass', 'Lauf', 'Screen Pass', 'Play Action'];
   const defensePlays: DefensePlay[] = ['Blitz', 'Zone Coverage', 'Man Coverage', 'Run Stuff', 'Prevent Defense'];
 
+  // KON-42: Strategy Preview - Show possible outcomes before play execution
+  const getStrategyPreview = (offense: OffensePlay | null, defense: DefensePlay | null): string | null => {
+    if (!offense) return null;
+
+    const previews: Record<OffensePlay, Record<DefensePlay | 'default', string>> = {
+      'Pass': {
+        'Blitz': '⚡ Hohes Risiko! 50% Big Play (15-35y) ODER 50% Sack (-5y)',
+        'Zone Coverage': '✓ Solide 5-15 Yards erwartet',
+        'Man Coverage': '✓ Gute Chance auf 8-23 Yards',
+        'Run Stuff': '✓ Gute Chance auf 8-23 Yards',
+        'Prevent Defense': '✓ Gute Chance auf 8-23 Yards',
+        'default': '📊 Durchschnittlich 8-23 Yards'
+      },
+      'Lauf': {
+        'Blitz': '🏃 GROSSER Lauf möglich! 10-22 Yards (Blitz öffnet Lücken)',
+        'Zone Coverage': '✓ Solide 4-12 Yards erwartet',
+        'Man Coverage': '✓ Solide 4-12 Yards erwartet',
+        'Run Stuff': '⚠️ HARD COUNTER! Nur 0-4 Yards möglich',
+        'Prevent Defense': '✓ Solide 4-12 Yards erwartet',
+        'default': '📊 Durchschnittlich 4-12 Yards'
+      },
+      'Screen Pass': {
+        'Blitz': '✓ Screen funktioniert gut gegen Blitz (8-20y)',
+        'Zone Coverage': '✓ Solide 8-20 Yards erwartet',
+        'Man Coverage': '✓ Solide 8-20 Yards erwartet',
+        'Run Stuff': '✓ Solide 8-20 Yards erwartet',
+        'Prevent Defense': '✓ Solide 8-20 Yards erwartet',
+        'default': '📊 Durchschnittlich 8-20 Yards'
+      },
+      'Play Action': {
+        'Blitz': '🎯 Play Action täuscht gut! 12-32 Yards möglich',
+        'Zone Coverage': '🎯 Hohe Belohnung: 12-32 Yards',
+        'Man Coverage': '🎯 Hohe Belohnung: 12-32 Yards',
+        'Run Stuff': '🎯 Hohe Belohnung: 12-32 Yards',
+        'Prevent Defense': '🎯 Hohe Belohnung: 12-32 Yards',
+        'default': '📊 Durchschnittlich 12-32 Yards (High Reward)'
+      }
+    };
+
+    if (defense && previews[offense][defense]) {
+      return previews[offense][defense];
+    }
+    return previews[offense]['default'];
+  };
+
   // Setup Phase Handlers
   const handleTeamNameChange = (team: 1 | 2, name: string) => {
     if (team === 1) {
@@ -397,7 +442,128 @@ const FootballGameSimulator: React.FC = () => {
     setGamePhase('gameOver');
   };
 
-  // 0.3: SVG Field Visualization
+  // KON-43: Formation positions for visual display
+  const getOffenseFormationPositions = (formation: OffenseFormation): Array<{x: number, y: number, label: string}> => {
+    // Positions relative to line of scrimmage (0 = ball, positive = behind ball)
+    const formations: Record<OffenseFormation, Array<{x: number, y: number, label: string}>> = {
+      'shotgun': [
+        {x: 0, y: 0, label: 'C'},          // Center
+        {x: -15, y: 0, label: 'OL'},       // Left Guard
+        {x: 15, y: 0, label: 'OL'},        // Right Guard
+        {x: -25, y: -30, label: 'WR'},     // Left WR
+        {x: 25, y: -30, label: 'WR'},      // Right WR
+        {x: 0, y: 40, label: 'QB'},        // QB in shotgun
+        {x: 15, y: 40, label: 'RB'},       // RB
+      ],
+      'i_formation': [
+        {x: 0, y: 0, label: 'C'},
+        {x: -15, y: 0, label: 'OL'},
+        {x: 15, y: 0, label: 'OL'},
+        {x: -25, y: -30, label: 'WR'},
+        {x: 25, y: -30, label: 'WR'},
+        {x: 0, y: 20, label: 'QB'},        // QB under center
+        {x: 0, y: 40, label: 'FB'},        // Fullback
+        {x: 0, y: 55, label: 'RB'},        // Running back
+      ],
+      'spread': [
+        {x: 0, y: 0, label: 'C'},
+        {x: -15, y: 0, label: 'OL'},
+        {x: 15, y: 0, label: 'OL'},
+        {x: -35, y: -30, label: 'WR'},     // Wide left
+        {x: -20, y: -20, label: 'WR'},     // Slot left
+        {x: 20, y: -20, label: 'WR'},      // Slot right
+        {x: 35, y: -30, label: 'WR'},      // Wide right
+        {x: 0, y: 40, label: 'QB'},
+      ],
+      'pistol': [
+        {x: 0, y: 0, label: 'C'},
+        {x: -15, y: 0, label: 'OL'},
+        {x: 15, y: 0, label: 'OL'},
+        {x: -25, y: -30, label: 'WR'},
+        {x: 25, y: -30, label: 'WR'},
+        {x: 0, y: 30, label: 'QB'},        // QB closer than shotgun
+        {x: 0, y: 50, label: 'RB'},
+      ],
+      'wildcat': [
+        {x: 0, y: 0, label: 'C'},
+        {x: -15, y: 0, label: 'OL'},
+        {x: 15, y: 0, label: 'OL'},
+        {x: -25, y: -30, label: 'WR'},
+        {x: 25, y: -30, label: 'WR'},
+        {x: 0, y: 20, label: 'RB'},        // RB at center (direct snap)
+        {x: 20, y: 20, label: 'WR'},       // Motion player
+      ],
+    };
+    return formations[formation];
+  };
+
+  const getDefenseFormationPositions = (formation: DefenseFormation): Array<{x: number, y: number, label: string}> => {
+    const formations: Record<DefenseFormation, Array<{x: number, y: number, label: string}>> = {
+      '4-3': [
+        {x: -20, y: -15, label: 'DE'},     // Defensive End
+        {x: -8, y: -15, label: 'DT'},      // Defensive Tackle
+        {x: 8, y: -15, label: 'DT'},
+        {x: 20, y: -15, label: 'DE'},
+        {x: -15, y: -35, label: 'LB'},     // Linebacker
+        {x: 0, y: -35, label: 'LB'},
+        {x: 15, y: -35, label: 'LB'},
+        {x: -30, y: -50, label: 'CB'},     // Cornerback
+        {x: 30, y: -50, label: 'CB'},
+        {x: 0, y: -60, label: 'S'},        // Safety
+      ],
+      '3-4': [
+        {x: -15, y: -15, label: 'DE'},
+        {x: 0, y: -15, label: 'NT'},       // Nose Tackle
+        {x: 15, y: -15, label: 'DE'},
+        {x: -20, y: -35, label: 'LB'},
+        {x: -8, y: -35, label: 'LB'},
+        {x: 8, y: -35, label: 'LB'},
+        {x: 20, y: -35, label: 'LB'},
+        {x: -30, y: -50, label: 'CB'},
+        {x: 30, y: -50, label: 'CB'},
+        {x: 0, y: -60, label: 'S'},
+      ],
+      'nickel': [
+        {x: -15, y: -15, label: 'DE'},
+        {x: 0, y: -15, label: 'DT'},
+        {x: 15, y: -15, label: 'DE'},
+        {x: -10, y: -35, label: 'LB'},
+        {x: 10, y: -35, label: 'LB'},
+        {x: -30, y: -50, label: 'CB'},
+        {x: -15, y: -50, label: 'NB'},     // Nickel back
+        {x: 15, y: -50, label: 'CB'},
+        {x: 30, y: -50, label: 'CB'},
+        {x: 0, y: -65, label: 'S'},
+      ],
+      'dime': [
+        {x: -15, y: -15, label: 'DE'},
+        {x: 15, y: -15, label: 'DE'},
+        {x: 0, y: -35, label: 'LB'},
+        {x: -35, y: -50, label: 'CB'},
+        {x: -18, y: -50, label: 'DB'},
+        {x: 0, y: -50, label: 'DB'},
+        {x: 18, y: -50, label: 'DB'},
+        {x: 35, y: -50, label: 'CB'},
+        {x: -10, y: -70, label: 'S'},
+        {x: 10, y: -70, label: 'S'},
+      ],
+      'prevent': [
+        {x: -15, y: -15, label: 'DE'},
+        {x: 15, y: -15, label: 'DE'},
+        {x: -35, y: -60, label: 'CB'},
+        {x: -18, y: -60, label: 'DB'},
+        {x: 0, y: -60, label: 'DB'},
+        {x: 18, y: -60, label: 'DB'},
+        {x: 35, y: -60, label: 'CB'},
+        {x: -15, y: -80, label: 'S'},
+        {x: 0, y: -80, label: 'S'},
+        {x: 15, y: -80, label: 'S'},
+      ],
+    };
+    return formations[formation];
+  };
+
+  // 0.3: SVG Field Visualization with KON-43 Formation Display
   const renderField = () => {
     const fieldWidth = 800;
     const fieldHeight = 200;
@@ -406,6 +572,11 @@ const FootballGameSimulator: React.FC = () => {
 
     // Ball position (0-100 yards maps to playing field)
     const ballX = endzoneWidth + (yardLine / 100) * playingFieldWidth;
+    const centerY = fieldHeight / 2;
+
+    // Get formation positions
+    const offensePositions = getOffenseFormationPositions(offenseFormation);
+    const defensePositions = getDefenseFormationPositions(defenseFormation);
 
     return (
       <svg width={fieldWidth} height={fieldHeight} className="border border-gray-300 mx-auto">
@@ -448,9 +619,37 @@ const FootballGameSimulator: React.FC = () => {
           END
         </text>
 
-        {/* Ball Position */}
-        <circle cx={ballX} cy={fieldHeight / 2} r="10" fill="orange" stroke="black" strokeWidth="2" />
-        <text x={ballX} y={fieldHeight / 2 + 4} textAnchor="middle" fill="black" fontSize="10" fontWeight="bold">
+        {/* KON-43: Offense Formation (Blue circles) */}
+        {offensePositions.map((pos, idx) => {
+          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.5));
+          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y));
+          return (
+            <g key={`off-${idx}`}>
+              <circle cx={playerX} cy={playerY} r="8" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
+                {pos.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* KON-43: Defense Formation (Red circles) */}
+        {defensePositions.map((pos, idx) => {
+          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.5));
+          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y));
+          return (
+            <g key={`def-${idx}`}>
+              <circle cx={playerX} cy={playerY} r="8" fill="#ef4444" stroke="white" strokeWidth="1.5" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
+                {pos.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Ball Position (on top) */}
+        <circle cx={ballX} cy={centerY} r="10" fill="orange" stroke="black" strokeWidth="2" />
+        <text x={ballX} y={centerY + 4} textAnchor="middle" fill="black" fontSize="10" fontWeight="bold">
           🏈
         </text>
       </svg>
@@ -736,6 +935,14 @@ const FootballGameSimulator: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                  {/* KON-42: Strategy Preview */}
+                  {selectedOffensePlay && (
+                    <div className="mt-3 p-3 bg-blue-100 rounded-lg border-l-4 border-blue-500">
+                      <p className="text-sm font-medium text-blue-800">
+                        {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
+                      </p>
+                    </div>
+                  )}
                   <div className="mt-4">
                     <label className="block text-sm font-medium mb-2">Formation:</label>
                     <select
