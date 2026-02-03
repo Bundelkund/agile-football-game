@@ -661,11 +661,14 @@ const FootballGameSimulator: React.FC = () => {
 
             {/* Score */}
             <div className="flex justify-around text-2xl font-bold">
-              <div className={possession === 1 ? 'text-green-600' : ''}>
-                {team1.name}: {team1.score}
+              <div className={`text-center ${possession === 1 ? 'text-green-600' : ''}`}>
+                <div className="text-lg">{team1.name}</div>
+                <div className="text-4xl">{team1.score}</div>
               </div>
-              <div className={possession === 2 ? 'text-green-600' : ''}>
-                {team2.name}: {team2.score}
+              <div className="text-3xl self-center">:</div>
+              <div className={`text-center ${possession === 2 ? 'text-green-600' : ''}`}>
+                <div className="text-lg">{team2.name}</div>
+                <div className="text-4xl">{team2.score}</div>
               </div>
             </div>
 
@@ -844,9 +847,16 @@ const FootballGameSimulator: React.FC = () => {
             <Trophy className="w-24 h-24 mx-auto text-yellow-500 mb-4" />
             <h1 className="text-4xl font-bold mb-4">Spiel beendet!</h1>
 
-            <div className="text-3xl font-bold mb-6">
-              <p>{team1.name}: {team1.score}</p>
-              <p>{team2.name}: {team2.score}</p>
+            <div className="flex justify-center gap-8 text-3xl font-bold mb-6">
+              <div className="text-center">
+                <div className="text-xl">{team1.name}</div>
+                <div className="text-5xl">{team1.score}</div>
+              </div>
+              <div className="text-4xl self-center">:</div>
+              <div className="text-center">
+                <div className="text-xl">{team2.name}</div>
+                <div className="text-5xl">{team2.score}</div>
+              </div>
             </div>
 
             {winner ? (
