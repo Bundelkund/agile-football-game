@@ -442,122 +442,124 @@ const FootballGameSimulator: React.FC = () => {
     setGamePhase('gameOver');
   };
 
-  // KON-43: Formation positions for visual display
+  // KON-43 + KON-48: Formation positions for visual display
+  // Rotated 90 degrees: x = depth (negative = behind LOS), y = spread (vertical on field)
+  // Offense is LEFT of ball, Defense is RIGHT of ball
   const getOffenseFormationPositions = (formation: OffenseFormation): Array<{x: number, y: number, label: string}> => {
-    // Positions relative to line of scrimmage (0 = ball, positive = behind ball)
     const formations: Record<OffenseFormation, Array<{x: number, y: number, label: string}>> = {
       'shotgun': [
-        {x: 0, y: 0, label: 'C'},          // Center
-        {x: -15, y: 0, label: 'OL'},       // Left Guard
-        {x: 15, y: 0, label: 'OL'},        // Right Guard
-        {x: -25, y: -30, label: 'WR'},     // Left WR
-        {x: 25, y: -30, label: 'WR'},      // Right WR
-        {x: 0, y: 40, label: 'QB'},        // QB in shotgun
-        {x: 15, y: 40, label: 'RB'},       // RB
+        {x: 0, y: 0, label: 'C'},           // Center at LOS
+        {x: 0, y: -12, label: 'OL'},        // Left Guard
+        {x: 0, y: 12, label: 'OL'},         // Right Guard
+        {x: -8, y: -35, label: 'WR'},       // Left WR (wide)
+        {x: -8, y: 35, label: 'WR'},        // Right WR (wide)
+        {x: -25, y: 0, label: 'QB'},        // QB in shotgun (behind center)
+        {x: -25, y: 12, label: 'RB'},       // RB next to QB
       ],
       'i_formation': [
         {x: 0, y: 0, label: 'C'},
-        {x: -15, y: 0, label: 'OL'},
-        {x: 15, y: 0, label: 'OL'},
-        {x: -25, y: -30, label: 'WR'},
-        {x: 25, y: -30, label: 'WR'},
-        {x: 0, y: 20, label: 'QB'},        // QB under center
-        {x: 0, y: 40, label: 'FB'},        // Fullback
-        {x: 0, y: 55, label: 'RB'},        // Running back
+        {x: 0, y: -12, label: 'OL'},
+        {x: 0, y: 12, label: 'OL'},
+        {x: -8, y: -35, label: 'WR'},
+        {x: -8, y: 35, label: 'WR'},
+        {x: -8, y: 0, label: 'QB'},         // QB under center
+        {x: -20, y: 0, label: 'FB'},        // Fullback behind QB
+        {x: -32, y: 0, label: 'RB'},        // RB behind FB (I-Formation)
       ],
       'spread': [
         {x: 0, y: 0, label: 'C'},
-        {x: -15, y: 0, label: 'OL'},
-        {x: 15, y: 0, label: 'OL'},
-        {x: -35, y: -30, label: 'WR'},     // Wide left
-        {x: -20, y: -20, label: 'WR'},     // Slot left
-        {x: 20, y: -20, label: 'WR'},      // Slot right
-        {x: 35, y: -30, label: 'WR'},      // Wide right
-        {x: 0, y: 40, label: 'QB'},
+        {x: 0, y: -12, label: 'OL'},
+        {x: 0, y: 12, label: 'OL'},
+        {x: -8, y: -45, label: 'WR'},       // Wide left
+        {x: -8, y: -25, label: 'WR'},       // Slot left
+        {x: -8, y: 25, label: 'WR'},        // Slot right
+        {x: -8, y: 45, label: 'WR'},        // Wide right
+        {x: -25, y: 0, label: 'QB'},
       ],
       'pistol': [
         {x: 0, y: 0, label: 'C'},
-        {x: -15, y: 0, label: 'OL'},
-        {x: 15, y: 0, label: 'OL'},
-        {x: -25, y: -30, label: 'WR'},
-        {x: 25, y: -30, label: 'WR'},
-        {x: 0, y: 30, label: 'QB'},        // QB closer than shotgun
-        {x: 0, y: 50, label: 'RB'},
+        {x: 0, y: -12, label: 'OL'},
+        {x: 0, y: 12, label: 'OL'},
+        {x: -8, y: -35, label: 'WR'},
+        {x: -8, y: 35, label: 'WR'},
+        {x: -18, y: 0, label: 'QB'},        // QB closer than shotgun
+        {x: -30, y: 0, label: 'RB'},        // RB directly behind QB
       ],
       'wildcat': [
         {x: 0, y: 0, label: 'C'},
-        {x: -15, y: 0, label: 'OL'},
-        {x: 15, y: 0, label: 'OL'},
-        {x: -25, y: -30, label: 'WR'},
-        {x: 25, y: -30, label: 'WR'},
-        {x: 0, y: 20, label: 'RB'},        // RB at center (direct snap)
-        {x: 20, y: 20, label: 'WR'},       // Motion player
+        {x: 0, y: -12, label: 'OL'},
+        {x: 0, y: 12, label: 'OL'},
+        {x: -8, y: -35, label: 'WR'},
+        {x: -8, y: 35, label: 'WR'},
+        {x: -8, y: 0, label: 'RB'},         // RB takes direct snap
+        {x: -8, y: 18, label: 'WR'},        // Motion player
       ],
     };
     return formations[formation];
   };
 
   const getDefenseFormationPositions = (formation: DefenseFormation): Array<{x: number, y: number, label: string}> => {
+    // Defense is RIGHT of ball (positive x = further from LOS toward own endzone)
     const formations: Record<DefenseFormation, Array<{x: number, y: number, label: string}>> = {
       '4-3': [
-        {x: -20, y: -15, label: 'DE'},     // Defensive End
-        {x: -8, y: -15, label: 'DT'},      // Defensive Tackle
-        {x: 8, y: -15, label: 'DT'},
-        {x: 20, y: -15, label: 'DE'},
-        {x: -15, y: -35, label: 'LB'},     // Linebacker
-        {x: 0, y: -35, label: 'LB'},
-        {x: 15, y: -35, label: 'LB'},
-        {x: -30, y: -50, label: 'CB'},     // Cornerback
-        {x: 30, y: -50, label: 'CB'},
-        {x: 0, y: -60, label: 'S'},        // Safety
+        {x: 8, y: -18, label: 'DE'},        // Defensive End
+        {x: 8, y: -6, label: 'DT'},         // Defensive Tackle
+        {x: 8, y: 6, label: 'DT'},
+        {x: 8, y: 18, label: 'DE'},
+        {x: 20, y: -12, label: 'LB'},       // Linebackers
+        {x: 20, y: 0, label: 'LB'},
+        {x: 20, y: 12, label: 'LB'},
+        {x: 35, y: -30, label: 'CB'},       // Cornerbacks
+        {x: 35, y: 30, label: 'CB'},
+        {x: 45, y: 0, label: 'S'},          // Safety
       ],
       '3-4': [
-        {x: -15, y: -15, label: 'DE'},
-        {x: 0, y: -15, label: 'NT'},       // Nose Tackle
-        {x: 15, y: -15, label: 'DE'},
-        {x: -20, y: -35, label: 'LB'},
-        {x: -8, y: -35, label: 'LB'},
-        {x: 8, y: -35, label: 'LB'},
-        {x: 20, y: -35, label: 'LB'},
-        {x: -30, y: -50, label: 'CB'},
-        {x: 30, y: -50, label: 'CB'},
-        {x: 0, y: -60, label: 'S'},
+        {x: 8, y: -12, label: 'DE'},
+        {x: 8, y: 0, label: 'NT'},          // Nose Tackle
+        {x: 8, y: 12, label: 'DE'},
+        {x: 20, y: -18, label: 'LB'},       // 4 Linebackers
+        {x: 20, y: -6, label: 'LB'},
+        {x: 20, y: 6, label: 'LB'},
+        {x: 20, y: 18, label: 'LB'},
+        {x: 35, y: -30, label: 'CB'},
+        {x: 35, y: 30, label: 'CB'},
+        {x: 45, y: 0, label: 'S'},
       ],
       'nickel': [
-        {x: -15, y: -15, label: 'DE'},
-        {x: 0, y: -15, label: 'DT'},
-        {x: 15, y: -15, label: 'DE'},
-        {x: -10, y: -35, label: 'LB'},
-        {x: 10, y: -35, label: 'LB'},
-        {x: -30, y: -50, label: 'CB'},
-        {x: -15, y: -50, label: 'NB'},     // Nickel back
-        {x: 15, y: -50, label: 'CB'},
-        {x: 30, y: -50, label: 'CB'},
-        {x: 0, y: -65, label: 'S'},
+        {x: 8, y: -12, label: 'DE'},
+        {x: 8, y: 0, label: 'DT'},
+        {x: 8, y: 12, label: 'DE'},
+        {x: 20, y: -8, label: 'LB'},
+        {x: 20, y: 8, label: 'LB'},
+        {x: 35, y: -35, label: 'CB'},
+        {x: 35, y: -15, label: 'NB'},       // Nickel back
+        {x: 35, y: 15, label: 'CB'},
+        {x: 35, y: 35, label: 'CB'},
+        {x: 50, y: 0, label: 'S'},
       ],
       'dime': [
-        {x: -15, y: -15, label: 'DE'},
-        {x: 15, y: -15, label: 'DE'},
-        {x: 0, y: -35, label: 'LB'},
-        {x: -35, y: -50, label: 'CB'},
-        {x: -18, y: -50, label: 'DB'},
-        {x: 0, y: -50, label: 'DB'},
-        {x: 18, y: -50, label: 'DB'},
-        {x: 35, y: -50, label: 'CB'},
-        {x: -10, y: -70, label: 'S'},
-        {x: 10, y: -70, label: 'S'},
+        {x: 8, y: -12, label: 'DE'},
+        {x: 8, y: 12, label: 'DE'},
+        {x: 20, y: 0, label: 'LB'},
+        {x: 35, y: -35, label: 'CB'},
+        {x: 35, y: -15, label: 'DB'},
+        {x: 35, y: 0, label: 'DB'},
+        {x: 35, y: 15, label: 'DB'},
+        {x: 35, y: 35, label: 'CB'},
+        {x: 50, y: -10, label: 'S'},
+        {x: 50, y: 10, label: 'S'},
       ],
       'prevent': [
-        {x: -15, y: -15, label: 'DE'},
-        {x: 15, y: -15, label: 'DE'},
-        {x: -35, y: -60, label: 'CB'},
-        {x: -18, y: -60, label: 'DB'},
-        {x: 0, y: -60, label: 'DB'},
-        {x: 18, y: -60, label: 'DB'},
-        {x: 35, y: -60, label: 'CB'},
-        {x: -15, y: -80, label: 'S'},
-        {x: 0, y: -80, label: 'S'},
-        {x: 15, y: -80, label: 'S'},
+        {x: 8, y: -12, label: 'DE'},
+        {x: 8, y: 12, label: 'DE'},
+        {x: 40, y: -35, label: 'CB'},
+        {x: 40, y: -15, label: 'DB'},
+        {x: 40, y: 0, label: 'DB'},
+        {x: 40, y: 15, label: 'DB'},
+        {x: 40, y: 35, label: 'CB'},
+        {x: 55, y: -12, label: 'S'},
+        {x: 55, y: 0, label: 'S'},
+        {x: 55, y: 12, label: 'S'},
       ],
     };
     return formations[formation];
@@ -619,28 +621,30 @@ const FootballGameSimulator: React.FC = () => {
           END
         </text>
 
-        {/* KON-43: Offense Formation (Blue circles) */}
+        {/* KON-43 + KON-48: Offense Formation (Blue circles) - LEFT of ball */}
         {offensePositions.map((pos, idx) => {
-          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.5));
-          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y));
+          // x = depth (negative = behind LOS, toward own endzone)
+          // y = spread (vertical position on field)
+          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.2));
+          const playerY = Math.max(12, Math.min(fieldHeight - 12, centerY + pos.y * 1.8));
           return (
             <g key={`off-${idx}`}>
-              <circle cx={playerX} cy={playerY} r="8" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
-              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
+              <circle cx={playerX} cy={playerY} r="7" fill="#3b82f6" stroke="white" strokeWidth="1.5" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
                 {pos.label}
               </text>
             </g>
           );
         })}
 
-        {/* KON-43: Defense Formation (Red circles) */}
+        {/* KON-43 + KON-48: Defense Formation (Red circles) - RIGHT of ball */}
         {defensePositions.map((pos, idx) => {
-          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.5));
-          const playerY = Math.max(15, Math.min(fieldHeight - 15, centerY + pos.y));
+          const playerX = Math.max(endzoneWidth + 10, Math.min(fieldWidth - endzoneWidth - 10, ballX + pos.x * 1.2));
+          const playerY = Math.max(12, Math.min(fieldHeight - 12, centerY + pos.y * 1.8));
           return (
             <g key={`def-${idx}`}>
-              <circle cx={playerX} cy={playerY} r="8" fill="#ef4444" stroke="white" strokeWidth="1.5" />
-              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="7" fontWeight="bold">
+              <circle cx={playerX} cy={playerY} r="7" fill="#ef4444" stroke="white" strokeWidth="1.5" />
+              <text x={playerX} y={playerY + 3} textAnchor="middle" fill="white" fontSize="6" fontWeight="bold">
                 {pos.label}
               </text>
             </g>
