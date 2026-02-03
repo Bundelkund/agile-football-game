@@ -157,6 +157,7 @@ const FootballGameSimulator: React.FC = () => {
     let yardsGained = 0;
     let event = '';
     let possessionChanged = false;
+    let turnoverType: 'touchdown' | 'field_goal' | 'fumble' | 'interception' | 'turnover_on_downs' | null = null;
 
     // Simplified play resolution
     const random = Math.random();
@@ -172,9 +173,11 @@ const FootballGameSimulator: React.FC = () => {
           setTeam2(prev => ({ ...prev, score: prev.score + 3 }));
         }
         possessionChanged = true;
+        turnoverType = 'field_goal';
       } else {
         event = `Field Goal VERFEHLT!`;
         possessionChanged = true;
+        turnoverType = 'field_goal'; // Missed FG also results in kickoff
       }
       setKickMode(false);
     } else {
@@ -211,8 +214,10 @@ const FootballGameSimulator: React.FC = () => {
 
       // Check for Interception/Fumble (5% chance)
       if (random < 0.05) {
-        event = 'TURNOVER! (Interception/Fumble)';
+        const isFumble = Math.random() < 0.5;
+        event = isFumble ? 'TURNOVER! (Fumble)' : 'TURNOVER! (Interception)';
         possessionChanged = true;
+        turnoverType = isFumble ? 'fumble' : 'interception';
         yardsGained = 0;
       }
 
@@ -259,6 +264,7 @@ const FootballGameSimulator: React.FC = () => {
         setTeam2(prev => ({ ...prev, score: prev.score + 6 }));
       }
       possessionChanged = true;
+      turnoverType = 'touchdown';
     }
 
     // Down System Logic
@@ -290,6 +296,7 @@ const FootballGameSimulator: React.FC = () => {
           // 4th Down without First Down - Turnover on Downs
           event += ' | TURNOVER ON DOWNS!';
           possessionChanged = true;
+          turnoverType = 'turnover_on_downs';
         }
       }
     }
@@ -297,11 +304,25 @@ const FootballGameSimulator: React.FC = () => {
     // Handle Possession Changes
     if (possessionChanged) {
       setPossession(possession === 1 ? 2 : 1);
-      setYardLine(35);
+
+      // Determine new yard line based on turnover type
+      let turnoverYardLine: number;
+      if (turnoverType === 'touchdown' || turnoverType === 'field_goal') {
+        // After scoring: Kickoff → Touchback at 25 yards
+        turnoverYardLine = 25;
+        event += ' | KICKOFF - Ball an 25 Yard Linie';
+      } else {
+        // Fumble, Interception, Turnover on Downs - mirror position
+        // Field is 0-100 from attacker's perspective
+        // Team A at 70y (30y to TD) → Fumble → Team B takes over at 100-70=30y (70y to TD)
+        turnoverYardLine = 100 - newYardLine;
+        event += ' | BALLBESITZWECHSEL';
+      }
+
+      setYardLine(turnoverYardLine);
       setDown(1);
       setYardsToGo(10);
-      setLineOfScrimmage(35);
-      event += ' | BALLBESITZWECHSEL';
+      setLineOfScrimmage(turnoverYardLine);
     } else {
       setYardLine(newYardLineValue);
       setDown(newDown);
@@ -310,12 +331,24 @@ const FootballGameSimulator: React.FC = () => {
     }
 
     // Update history
+    // Calculate final position for display
+    let finalPosition: number;
+    if (possessionChanged) {
+      if (turnoverType === 'touchdown' || turnoverType === 'field_goal') {
+        finalPosition = 25; // Kickoff touchback
+      } else {
+        finalPosition = 100 - newYardLine; // Mirrored position
+      }
+    } else {
+      finalPosition = newYardLine;
+    }
+
     const playResult: PlayResult = {
       play: currentPlay + 1,
       offensePlay: selectedOffensePlay,
       defensePlay: selectedDefensePlay,
       yards: yardsGained,
-      newPosition: possessionChanged ? 35 : newYardLine,
+      newPosition: finalPosition,
       event,
       possession: offenseTeam.name,
       offenseFormation,
