@@ -95,8 +95,13 @@ const FootballGameSimulator: React.FC = () => {
   const offensePlays: OffensePlay[] = ['Pass', 'Lauf', 'Screen Pass', 'Play Action'];
   const defensePlays: DefensePlay[] = ['Blitz', 'Zone Coverage', 'Man Coverage', 'Run Stuff', 'Prevent Defense'];
 
-  // KON-42: Strategy Preview - Show possible outcomes before play execution
-  const getStrategyPreview = (offense: OffensePlay | null, defense: DefensePlay | null): string | null => {
+  // KON-42 + KON-51: Strategy Preview with Formation Bonus
+  const getStrategyPreview = (
+    offense: OffensePlay | null,
+    defense: DefensePlay | null,
+    offForm: OffenseFormation,
+    defForm: DefenseFormation
+  ): string | null => {
     if (!offense) return null;
 
     const previews: Record<OffensePlay, Record<DefensePlay | 'default', string>> = {
@@ -134,10 +139,22 @@ const FootballGameSimulator: React.FC = () => {
       }
     };
 
-    if (defense && previews[offense][defense]) {
-      return previews[offense][defense];
+    let preview = defense && previews[offense][defense]
+      ? previews[offense][defense]
+      : previews[offense]['default'];
+
+    // KON-51: Calculate and display formation bonus
+    const playType = mapOffensePlayToPlayType(offense);
+    const formationBonus = calculateFormationBonus(playType, offForm, defForm);
+    const netBonus = formationBonus.offenseBonus - formationBonus.defenseBonus;
+
+    if (netBonus !== 0) {
+      const bonusSign = netBonus > 0 ? '+' : '';
+      const bonusEmoji = netBonus > 0 ? '📈' : '📉';
+      preview += ` | ${bonusEmoji} Formation: ${bonusSign}${netBonus}%`;
     }
-    return previews[offense]['default'];
+
+    return preview;
   };
 
   // Setup Phase Handlers
@@ -1023,7 +1040,7 @@ const FootballGameSimulator: React.FC = () => {
                 <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
                   <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
                   <p className="text-center text-lg font-medium text-gray-800">
-                    {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
+                    {getStrategyPreview(selectedOffensePlay, selectedDefensePlay, offenseFormation, defenseFormation)}
                   </p>
                   {!selectedDefensePlay && (
                     <p className="text-center text-sm text-gray-500 mt-1">
