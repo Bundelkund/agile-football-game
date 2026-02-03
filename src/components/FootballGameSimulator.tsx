@@ -87,6 +87,7 @@ const FootballGameSimulator: React.FC = () => {
   const [selectedOffensePlay, setSelectedOffensePlay] = useState<OffensePlay | null>(null);
   const [selectedDefensePlay, setSelectedDefensePlay] = useState<DefensePlay | null>(null);
   const [kickMode, setKickMode] = useState<boolean>(false);
+  const [patMode, setPATMode] = useState<boolean>(false); // KON-50: Point After Touchdown
   const [offenseFormation, setOffenseFormation] = useState<OffenseFormation>('shotgun');
   const [defenseFormation, setDefenseFormation] = useState<DefenseFormation>('4-3');
   const [lastPlayDescription, setLastPlayDescription] = useState<PlayDescription | null>(null);
@@ -202,7 +203,8 @@ const FootballGameSimulator: React.FC = () => {
     let yardsGained = 0;
     let event = '';
     let possessionChanged = false;
-    let turnoverType: 'touchdown' | 'field_goal' | 'fumble' | 'interception' | 'turnover_on_downs' | null = null;
+    // KON-50: 'touchdown' removed - now handled by PAT mode separately
+    let turnoverType: 'field_goal' | 'fumble' | 'interception' | 'turnover_on_downs' | null = null;
 
     // Simplified play resolution
     const random = Math.random();
@@ -302,7 +304,8 @@ const FootballGameSimulator: React.FC = () => {
     const description = generateDescription(playContext);
     setLastPlayDescription(description);
 
-    // Check for Touchdown
+    // Check for Touchdown - KON-50: Don't change possession yet, activate PAT mode
+    let isTouchdown = false;
     if (newYardLine >= 100) {
       event = 'TOUCHDOWN! (+6 Punkte)';
       if (possession === 1) {
@@ -310,8 +313,8 @@ const FootballGameSimulator: React.FC = () => {
       } else {
         setTeam2(prev => ({ ...prev, score: prev.score + 6 }));
       }
-      possessionChanged = true;
-      turnoverType = 'touchdown';
+      isTouchdown = true;
+      // Don't set possessionChanged = true here - PAT comes first!
     }
 
     // Down System Logic
@@ -353,9 +356,10 @@ const FootballGameSimulator: React.FC = () => {
       setPossession(possession === 1 ? 2 : 1);
 
       // Determine new yard line based on turnover type
+      // KON-50: Touchdown no longer goes through here - handled by PAT mode
       let turnoverYardLine: number;
-      if (turnoverType === 'touchdown' || turnoverType === 'field_goal') {
-        // After scoring: Kickoff → Touchback at 25 yards
+      if (turnoverType === 'field_goal') {
+        // After field goal: Kickoff → Touchback at 25 yards
         turnoverYardLine = 25;
         event += ' | KICKOFF - Ball an 25 Yard Linie';
       } else {
@@ -379,13 +383,16 @@ const FootballGameSimulator: React.FC = () => {
 
     // Update history
     // Calculate final position for display
+    // KON-50: Touchdown no longer goes through possessionChanged - handled by PAT mode
     let finalPosition: number;
     if (possessionChanged) {
-      if (turnoverType === 'touchdown' || turnoverType === 'field_goal') {
+      if (turnoverType === 'field_goal') {
         finalPosition = 25; // Kickoff touchback
       } else {
-        finalPosition = 100 - newYardLine; // Mirrored position
+        finalPosition = 100 - newYardLine; // Mirrored position for turnovers
       }
+    } else if (isTouchdown) {
+      finalPosition = 100; // Show touchdown position
     } else {
       finalPosition = newYardLine;
     }
@@ -413,9 +420,82 @@ const FootballGameSimulator: React.FC = () => {
       setGamePhase('gameOver');
     }
 
+    // KON-50: Activate PAT mode after touchdown (before kickoff)
+    if (isTouchdown) {
+      setPATMode(true);
+      setYardLine(97); // PAT from 3-yard line (97 = 3 yards from endzone)
+    }
+
     // Reset selections
     setSelectedOffensePlay(null);
     setSelectedDefensePlay(null);
+  };
+
+  // KON-50: Execute Point After Touchdown (Extra Point or 2-Point Conversion)
+  const executePAT = (type: 'extra_point' | 'two_point') => {
+    const offenseTeam = possession === 1 ? team1 : team2;
+    const random = Math.random();
+    let success = false;
+    let points = 0;
+    let event = '';
+
+    if (type === 'extra_point') {
+      // Extra Point: 94% success rate, +1 point
+      success = random < 0.94;
+      if (success) {
+        points = 1;
+        event = 'EXTRA POINT GUT! (+1 Punkt)';
+      } else {
+        event = 'EXTRA POINT VERFEHLT!';
+      }
+    } else {
+      // 2-Point Conversion: 50% success rate, +2 points
+      success = random < 0.50;
+      if (success) {
+        points = 2;
+        event = '2-POINT CONVERSION ERFOLGREICH! (+2 Punkte)';
+      } else {
+        event = '2-POINT CONVERSION GESCHEITERT!';
+      }
+    }
+
+    // Add points
+    if (points > 0) {
+      if (possession === 1) {
+        setTeam1(prev => ({ ...prev, score: prev.score + points }));
+      } else {
+        setTeam2(prev => ({ ...prev, score: prev.score + points }));
+      }
+    }
+
+    // Add to history
+    const patResult: PlayResult = {
+      play: currentPlay,
+      offensePlay: type === 'extra_point' ? 'Pass' : 'Lauf', // Dummy
+      defensePlay: 'Zone Coverage', // Dummy
+      yards: 0,
+      newPosition: 25,
+      event: event + ' | KICKOFF - Ball an 25 Yard Linie',
+      possession: offenseTeam.name,
+      offenseFormation,
+      defenseFormation,
+    };
+    setHistory(prev => [...prev, patResult]);
+
+    // Now do the kickoff - switch possession
+    setPossession(possession === 1 ? 2 : 1);
+    setYardLine(25);
+    setDown(1);
+    setYardsToGo(10);
+    setLineOfScrimmage(25);
+    setPATMode(false);
+
+    // Update last play description
+    setLastPlayDescription({
+      headline: success ? (type === 'extra_point' ? 'Extra Point!' : '2-Point Conversion!') : 'PAT Fehlgeschlagen!',
+      narrative: event,
+      weatherNote: undefined
+    });
   };
 
   const resetGame = () => {
@@ -431,6 +511,7 @@ const FootballGameSimulator: React.FC = () => {
     setHistory([]);
     setIsLastPlay(false);
     setKickMode(false);
+    setPATMode(false); // KON-50
     setOffenseFormation('shotgun');
     setDefenseFormation('4-3');
     setLastPlayDescription(null);
@@ -907,23 +988,57 @@ const FootballGameSimulator: React.FC = () => {
             </div>
           )}
 
-          {/* KON-42 + KON-49: Strategy Preview - Centered above play selection */}
-          {selectedOffensePlay && (
-            <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
-              <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
-              <p className="text-center text-lg font-medium text-gray-800">
-                {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
+          {/* KON-50: PAT Mode - Point After Touchdown */}
+          {patMode ? (
+            <div className="bg-gradient-to-r from-green-100 via-yellow-100 to-green-100 p-6 rounded-lg shadow-lg mb-6 border-2 border-green-500">
+              <h2 className="text-2xl font-bold text-center text-green-800 mb-4">
+                TOUCHDOWN! Wähle den Zusatzpunkt-Versuch:
+              </h2>
+              <p className="text-center text-gray-700 mb-6">
+                {(possession === 1 ? team1 : team2).name} hat soeben einen Touchdown erzielt!
               </p>
-              {!selectedDefensePlay && (
-                <p className="text-center text-sm text-gray-500 mt-1">
-                  (Wähle Defense-Spielzug für spezifische Vorhersage)
-                </p>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                <button
+                  onClick={() => executePAT('extra_point')}
+                  className="p-6 bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-all"
+                >
+                  <div className="text-xl font-bold mb-2">Extra Point</div>
+                  <div className="text-sm">+1 Punkt (94% Erfolg)</div>
+                  <div className="text-xs mt-2 opacity-80">Sicherer Kick von der 15-Yard-Linie</div>
+                </button>
+                <button
+                  onClick={() => executePAT('two_point')}
+                  className="p-6 bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-lg transition-all"
+                >
+                  <div className="text-xl font-bold mb-2">2-Point Conversion</div>
+                  <div className="text-sm">+2 Punkte (50% Erfolg)</div>
+                  <div className="text-xs mt-2 opacity-80">Riskanter Spielzug von der 2-Yard-Linie</div>
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              {/* KON-42 + KON-49: Strategy Preview - Centered above play selection */}
+              {selectedOffensePlay && (
+                <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
+                  <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
+                  <p className="text-center text-lg font-medium text-gray-800">
+                    {getStrategyPreview(selectedOffensePlay, selectedDefensePlay)}
+                  </p>
+                  {!selectedDefensePlay && (
+                    <p className="text-center text-sm text-gray-500 mt-1">
+                      (Wähle Defense-Spielzug für spezifische Vorhersage)
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Play Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Play Selection - Hidden during PAT mode */}
+          {!patMode && (
+            <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Offense Plays */}
             <div className="bg-blue-50 rounded-lg shadow-lg p-6">
               <h2 className="text-2xl font-bold mb-4">
@@ -1036,6 +1151,8 @@ const FootballGameSimulator: React.FC = () => {
               Spielzug ausführen
             </button>
           </div>
+            </>
+          )}
 
           {/* History */}
           <div className="bg-white rounded-lg shadow-lg p-6">
