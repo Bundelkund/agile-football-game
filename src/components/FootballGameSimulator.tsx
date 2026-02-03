@@ -181,39 +181,41 @@ const FootballGameSimulator: React.FC = () => {
       }
       setKickMode(false);
     } else {
-      // Regular play
+      // Regular play - KON-40: Workshop-tauglich mit mehr Action
       if (selectedOffensePlay === 'Pass') {
         if (selectedDefensePlay === 'Blitz') {
-          yardsGained = random > 0.6 ? Math.floor(Math.random() * 15) + 10 : -3;
-          event = yardsGained > 0 ? 'Erfolgreicher Pass trotz Blitz!' : 'Sack!';
+          // High risk/reward: 50% Big Play (15-35y), 50% Sack (-5y)
+          yardsGained = random > 0.5 ? Math.floor(Math.random() * 20) + 15 : -5;
+          event = yardsGained > 0 ? 'BIG PLAY! Pass trotz Blitz!' : 'Sack!';
         } else if (selectedDefensePlay === 'Zone Coverage') {
-          yardsGained = Math.floor(Math.random() * 8) + 2;
-          event = 'Kurzer Passgewinn';
+          yardsGained = Math.floor(Math.random() * 10) + 5; // 5-15y
+          event = 'Passgewinn gegen Zone';
         } else {
-          yardsGained = Math.floor(Math.random() * 12) + 3;
+          yardsGained = Math.floor(Math.random() * 15) + 8; // 8-23y
           event = 'Pass komplett';
         }
       } else if (selectedOffensePlay === 'Lauf') {
         if (selectedDefensePlay === 'Run Stuff') {
-          yardsGained = Math.floor(Math.random() * 3);
+          yardsGained = Math.floor(Math.random() * 4); // 0-4y (hard counter)
           event = 'Lauf gestoppt';
         } else if (selectedDefensePlay === 'Blitz') {
-          yardsGained = Math.floor(Math.random() * 10) + 5;
-          event = 'Guter Laufgewinn!';
+          yardsGained = Math.floor(Math.random() * 12) + 10; // 10-22y (big run!)
+          event = 'GROSSER Laufgewinn!';
         } else {
-          yardsGained = Math.floor(Math.random() * 6) + 2;
-          event = 'Standardlauf';
+          yardsGained = Math.floor(Math.random() * 8) + 4; // 4-12y
+          event = 'Solider Lauf';
         }
       } else if (selectedOffensePlay === 'Screen Pass') {
-        yardsGained = Math.floor(Math.random() * 10) + 3;
-        event = 'Screen Pass gelingt';
+        yardsGained = Math.floor(Math.random() * 12) + 8; // 8-20y
+        event = 'Screen Pass gelingt!';
       } else if (selectedOffensePlay === 'Play Action') {
-        yardsGained = Math.floor(Math.random() * 15) + 5;
-        event = 'Play Action täuscht Defense';
+        yardsGained = Math.floor(Math.random() * 20) + 12; // 12-32y (high reward)
+        event = 'Play Action täuscht komplett!';
       }
 
       // Check for Interception/Fumble (5% chance)
-      if (random < 0.05) {
+      // KON-41: No turnovers in first 2 plays to avoid frustration
+      if (random < 0.05 && currentPlay >= 2) {
         const isFumble = Math.random() < 0.5;
         event = isFumble ? 'TURNOVER! (Fumble)' : 'TURNOVER! (Interception)';
         possessionChanged = true;
