@@ -88,6 +88,7 @@ const FootballGameSimulator: React.FC = () => {
   const [selectedDefensePlay, setSelectedDefensePlay] = useState<DefensePlay | null>(null);
   const [kickMode, setKickMode] = useState<boolean>(false);
   const [patMode, setPATMode] = useState<boolean>(false); // KON-50: Point After Touchdown
+  const [kickoffMode, setKickoffMode] = useState<boolean>(false); // KON-52: Kickoff after TD/PAT
   const [offenseFormation, setOffenseFormation] = useState<OffenseFormation>('shotgun');
   const [defenseFormation, setDefenseFormation] = useState<DefenseFormation>('4-3');
   const [lastPlayDescription, setLastPlayDescription] = useState<PlayDescription | null>(null);
@@ -491,26 +492,57 @@ const FootballGameSimulator: React.FC = () => {
       offensePlay: type === 'extra_point' ? 'Pass' : 'Lauf', // Dummy
       defensePlay: 'Zone Coverage', // Dummy
       yards: 0,
-      newPosition: 25,
-      event: event + ' | KICKOFF - Ball an 25 Yard Linie',
+      newPosition: yardLine, // Keep current position until kickoff
+      event: event,
       possession: offenseTeam.name,
       offenseFormation,
       defenseFormation,
     };
     setHistory(prev => [...prev, patResult]);
 
-    // Now do the kickoff - switch possession
-    setPossession(possession === 1 ? 2 : 1);
-    setYardLine(25);
-    setDown(1);
-    setYardsToGo(10);
-    setLineOfScrimmage(25);
+    // KON-52: Don't switch possession yet - activate kickoff mode first
     setPATMode(false);
+    setKickoffMode(true);
 
     // Update last play description
     setLastPlayDescription({
       headline: success ? (type === 'extra_point' ? 'Extra Point!' : '2-Point Conversion!') : 'PAT Fehlgeschlagen!',
       narrative: event,
+      weatherNote: undefined
+    });
+  };
+
+  // KON-52: Execute Kickoff after PAT
+  const executeKickoff = () => {
+    const kickingTeam = possession === 1 ? team1 : team2;
+    const receivingTeam = possession === 1 ? team2 : team1;
+
+    // Add kickoff to history
+    const kickoffResult: PlayResult = {
+      play: currentPlay,
+      offensePlay: 'Pass', // Dummy
+      defensePlay: 'Zone Coverage', // Dummy
+      yards: 0,
+      newPosition: 25,
+      event: `KICKOFF von ${kickingTeam.name} | ${receivingTeam.name} übernimmt an der 25 Yard Linie`,
+      possession: kickingTeam.name,
+      offenseFormation,
+      defenseFormation,
+    };
+    setHistory(prev => [...prev, kickoffResult]);
+
+    // Now switch possession
+    setPossession(possession === 1 ? 2 : 1);
+    setYardLine(25);
+    setDown(1);
+    setYardsToGo(10);
+    setLineOfScrimmage(25);
+    setKickoffMode(false);
+
+    // Update description
+    setLastPlayDescription({
+      headline: 'Kickoff!',
+      narrative: `${receivingTeam.name} startet ihren Drive an der 25 Yard Linie.`,
       weatherNote: undefined
     });
   };
@@ -529,6 +561,7 @@ const FootballGameSimulator: React.FC = () => {
     setIsLastPlay(false);
     setKickMode(false);
     setPATMode(false); // KON-50
+    setKickoffMode(false); // KON-52
     setOffenseFormation('shotgun');
     setDefenseFormation('4-3');
     setLastPlayDescription(null);
@@ -1006,7 +1039,7 @@ const FootballGameSimulator: React.FC = () => {
           )}
 
           {/* KON-50: PAT Mode - Point After Touchdown */}
-          {patMode ? (
+          {patMode && (
             <div className="bg-gradient-to-r from-green-100 via-yellow-100 to-green-100 p-6 rounded-lg shadow-lg mb-6 border-2 border-green-500">
               <h2 className="text-2xl font-bold text-center text-green-800 mb-4">
                 TOUCHDOWN! Wähle den Zusatzpunkt-Versuch:
@@ -1033,27 +1066,47 @@ const FootballGameSimulator: React.FC = () => {
                 </button>
               </div>
             </div>
-          ) : (
-            <>
-              {/* KON-42 + KON-49: Strategy Preview - Centered above play selection */}
-              {selectedOffensePlay && (
-                <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
-                  <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
-                  <p className="text-center text-lg font-medium text-gray-800">
-                    {getStrategyPreview(selectedOffensePlay, selectedDefensePlay, offenseFormation, defenseFormation)}
-                  </p>
-                  {!selectedDefensePlay && (
-                    <p className="text-center text-sm text-gray-500 mt-1">
-                      (Wähle Defense-Spielzug für spezifische Vorhersage)
-                    </p>
-                  )}
-                </div>
-              )}
-            </>
           )}
 
-          {/* Play Selection - Hidden during PAT mode */}
-          {!patMode && (
+          {/* KON-52: Kickoff Mode - After PAT */}
+          {kickoffMode && (
+            <div className="bg-gradient-to-r from-orange-100 via-yellow-100 to-orange-100 p-6 rounded-lg shadow-lg mb-6 border-2 border-orange-500">
+              <h2 className="text-2xl font-bold text-center text-orange-800 mb-4">
+                Kickoff
+              </h2>
+              <p className="text-center text-gray-700 mb-6">
+                {(possession === 1 ? team1 : team2).name} führt den Kickoff aus.<br />
+                {(possession === 1 ? team2 : team1).name} wird den Ball an der 25 Yard Linie übernehmen.
+              </p>
+              <div className="flex justify-center">
+                <button
+                  onClick={executeKickoff}
+                  className="p-6 bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-lg transition-all min-w-64"
+                >
+                  <div className="text-xl font-bold mb-2">Kickoff ausführen</div>
+                  <div className="text-sm">Ball geht an {(possession === 1 ? team2 : team1).name}</div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* KON-42 + KON-49: Strategy Preview - Centered above play selection */}
+          {!patMode && !kickoffMode && selectedOffensePlay && (
+            <div className="bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 p-4 rounded-lg shadow-lg mb-6 border-2 border-purple-300">
+              <h3 className="text-lg font-bold text-center text-purple-800 mb-2">Strategie-Vorschau</h3>
+              <p className="text-center text-lg font-medium text-gray-800">
+                {getStrategyPreview(selectedOffensePlay, selectedDefensePlay, offenseFormation, defenseFormation)}
+              </p>
+              {!selectedDefensePlay && (
+                <p className="text-center text-sm text-gray-500 mt-1">
+                  (Wähle Defense-Spielzug für spezifische Vorhersage)
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Play Selection - Hidden during PAT mode and Kickoff mode */}
+          {!patMode && !kickoffMode && (
             <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Offense Plays */}
